@@ -1074,6 +1074,7 @@ int optimizeF(float* f_h, float* y_k_h, float* x_h, cudaStream_t stream) {
 	float* f_n_part_sums_d = NULL;
 	float* f_n_d = NULL;
 	float* f_n_h = NULL;
+	float* y_k_h_2 = NULL;
 	char* str = (char*) malloc(80);
 	cudaMallocHost(&f_n_h, sizeof(float));
 	float* delta_nabla_f_part_sums_h;
@@ -1148,6 +1149,9 @@ int optimizeF(float* f_h, float* y_k_h, float* x_h, cudaStream_t stream) {
 	cudaMalloc(
 			(void**) &(helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums),
 			sizeof(float) * 32768);
+/// Space for the error-checked back-copy
+	cudaMallocHost((void**) (void*) &y_k_h_2,
+			512 * 512 * sizeof(float));
 	streamCallback->finished = false;
 	streamCallback->helper_struct_d = helper_struct_d;
 	streamCallback->helper_struct_h = helper_struct_h;
@@ -1174,6 +1178,14 @@ int optimizeF(float* f_h, float* y_k_h, float* x_h, cudaStream_t stream) {
 	snprintf(str, 80, "pre-loop-x_d_X.pgm");
 		str[79] = '\0';
 		output_size_X(x_d, str);
+	cudaMemcpyAsync(y_k_h_2, y_k_d,
+			sizeof(float) * (storedSizeX / 2) * (NUM_PATCHES_X + 1)
+					* (storedSizeX / 2) * (NUM_PATCHES_Y + 1),
+			cudaMemcpyDeviceToHost, stream);
+	cudaDeviceSynchronize();
+	printf("\nDifference as of memcpy between y:k_h_2 and y_k_h at line 1182: %d\n", memcmp(y_k_h, y_k_h_2,
+				sizeof(float) * (storedSizeX / 2) * (NUM_PATCHES_X + 1)
+					* (storedSizeX / 2) * (NUM_PATCHES_Y + 1)));
 //puts("Name:\n");
 	cudaError_t error = cudaGetLastError();
 //puts(cudaGetErrorName(error));
@@ -1636,7 +1648,7 @@ int main(void) {
 //			cudaMemcpy(odata, d, sizeof(int) * WORK_SIZE,
 //					cudaMemcpyDeviceToHost));
 //	CUDA_CHECK_RETURN(cudaFree((void* ) d));
-	CUDA_CHECK_RETURN(cudaDeviceReset());
-	puts(cudaGetErrorString(cudaGetLastError()));
-	return cudaGetLastError();
+//	CUDA_CHECK_RETURN(cudaDeviceReset());
+//	puts(cudaGetErrorString(cudaGetLastError()));
+//	return cudaGetLastError();
 }
