@@ -8,4 +8,8 @@
 #include <cuda_runtime_api.h>
 #include <math.h>
 #include <driver_functions.h>
-define(`concatVarSize', eval(`1 ** 8'))
+define(`stop', `dnl')
+changequote(`[', `]') stop ´´
+changequote([`], [´])
+define(`concatVarSize´, eval(`1 ** 8´))
+
