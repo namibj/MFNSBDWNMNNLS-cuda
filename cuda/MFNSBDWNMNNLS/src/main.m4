@@ -71,7 +71,7 @@ __global__ void kernel_nabla_tilde_Gets_nabla_capped_with_rule( float* __restric
 	vec_nabla_tilde_f[i] = (0 < vec_nabla_f[i] && 0 == vec_x[i]) ? 0 : vec_nabla_f[i];
 }
 
-__device__ _DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrit__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ shared_Ptr) {
+__device__ _DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ shared_Ptr) {
 	m4_define(`_CALL_SPLIT_concatVar´, `int xPos = (offset / _DEF_concatVarSize) & _DEF_SIZE_concatVarSize;
 	int yPos = offset & _DEF_concatVarSize;
 	int patchNum = offset / _DEF_cpncatVarSize / _DEF_concatVarSize;´)
@@ -95,3 +95,13 @@ __device__ _DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrit__ dataIn, size_t 
 	_CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
 	return ((_DEF_FFT_PRECISION(`R´)*) dataIn)[(_DEF_SIZE_F * _DEF_SIZE_F) *  patchNum + _DEF_SIZE_F * xPosStored + yPosStored] * _CALL_GEWICHTUNG(`xPos - _DEF_SIZE_HALF_F - (_DEF_storedSizeX/2)´, `yPos - _DEF_SIZE_HALF_F - (_DEF_storedSizeX/2)´);
 }
+
+__device__ void store_f_T_p_conj_fft_X(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = m4_ifelse(`float´, _DEF_FFT_PRECISION_TYPE, `cuConjf´, `double´, _DEF_FFT_PRECISION_TYPE, `cuConj´)(elment); m4_dnl TODO: insert right cmmand/
+}
+
+__device__ _DEF_FFT_PRECISION(`C´) load_F_X_m_F_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
+	return m4_ifelse(`float´, _DEF_FFT_PRECISION_TYPE, `cuCmulf´)(((_DEF_FFT_PREC ISION(`C´)*) (dataIn))[offset], ((_DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);  m4_dnl TODO: include double precision as an option for the commplex multipliction.
+}
+
+
