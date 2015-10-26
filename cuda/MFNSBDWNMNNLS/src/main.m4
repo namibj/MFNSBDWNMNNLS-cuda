@@ -70,3 +70,28 @@ __global__ void kernel_nabla_tilde_Gets_nabla_capped_with_rule( float* __restric
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 	vec_nabla_tilde_f[i] = (0 < vec_nabla_f[i] && 0 == vec_x[i]) ? 0 : vec_nabla_f[i];
 }
+
+__device__ _DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrit__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ shared_Ptr) {
+	m4_define(`_CALL_SPLIT_concatVar´, `int xPos = (offset / _DEF_concatVarSize) & _DEF_SIZE_concatVarSize;
+	int yPos = offset & _DEF_concatVarSize;
+	int patchNum = offset / _DEF_cpncatVarSize / _DEF_concatVarSize;´)
+	m4_define(`_CALL_RESTRICT_WITH_PADDING´, `_CALL_SPLIT_concatVar
+	m4_ifelse(`F´, `$1´, `int xPosStored, yPosStored;
+	if (xPos <= _DEF_SIZE_HALF_F) { m4_dnl lower valid end
+		xPosStored = xPos + _DEF_SIZE_HALF_F;
+	} else if (_DEF_FFT_SIZE - _DEF_SIZE_HALF_F <= xPos) { m4_dnl upper valid end
+		xPosStored = xPos + _DEF_SIZE_HALF_F - _DEF_FFT_SIZE;
+	} else {
+		$2
+	}
+	if (yPos <= _DEF_SIZE_HALF_F) {  m4_dnl lower valid end
+		yPosStored = yPos + _DEF_SIZE_HALF_F;
+	} else if (_DEF_FFT_SIZE - _DEF_SIZE_HALF_F <= yPos) { m4_dnl upper valid end
+		yPosStored = yPos + _DEF_SIZE_HALF_F - _DEF_FFT_SIZE;
+	} else {
+		$2
+	}´, `X´, `$1´, ` m4_dnl TODO: complete for the zeroSpace[4] way in X and use $2, $3, etc. to select the right way, but only as many arguments as needed.
+	´)´)
+	_CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
+	return ((_DEF_FFT_PRECISION(`R´)*) dataIn)[(_DEF_SIZE_F * _DEF_SIZE_F) *  patchNum + _DEF_SIZE_F * xPosStored + yPosStored] * _CALL_GEWICHTUNG(`xPos - _DEF_SIZE_HALF_F - (_DEF_storedSizeX/2)´, `yPos - _DEF_SIZE_HALF_F - (_DEF_storedSizeX/2)´);
+}
