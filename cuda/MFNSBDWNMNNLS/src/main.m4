@@ -64,4 +64,9 @@ __global__ void  kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_b
 	}
 }
 
-		
+__global__ void kernel_nabla_tilde_Gets_nabla_capped_with_rule( float* __restrict__ vec_nabla_tide_f, float* __restrict__ vec_nabla_f, float* __restrict__ vec_X) {
+	_DEF_BLOCK_TOO_HIGH_THEADS_XY(`X´)
+		return;
+	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+	vec_nabla_tilde_f[i] = (0 < vec_nabla_f[i] && 0 == vec_x[i]) ? 0 : vec_nabla_f[i];
+}
