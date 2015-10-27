@@ -97,31 +97,31 @@ __device__ _DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t
 	int yPatch = patchNum - xPatch * _DEF_NUM_PATCHES_Y;
 	if(0 == xPatch) { m4_dnl x = 0 border
 		zero_space[0] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX / 2));
-		zero_space[1] = _DEF_FFT_SIZE;
+		zero_space[1] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
 	} else if (_DEF_NUM_PATCHES_Y - 1 == xPatch) { m4_dnl x = MAX border
-		zero_space[0] = 0;
+		zero_space[0] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
 		zero_space[1] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX / 2));
 	} else { m4_dnl  no x border
-		zero_space[0] = 0;
-		zero_space[1] = _DEF_FFT_SIZE;
+		zero_space[0] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
+		zero_space[1] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
 	}
 
 	if (0 == yPatch) { m4_dnl y = 0 border
 		zero_space[2] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX /2));
-		zero_space[3] = _DEF_FFT_SIZE;
+		zero_space[3] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
 	} else if (_DEF_NUM_PATCHES_X - 1 == yPatch) { m4_dnl y = MAX border
-		zero_space[2] = 0;
+		zero_space[2] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
 		zero_space[3] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX /2));
 	} else { m4_dnl no y border
-		zero_space[2] = 0;
-		zero_space[3] = _DEF_FFT_SIZE;
+		zero_space[2] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
+		zero_space[3] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
 	}
 
 	int patcOffset = _DEF_xPatchOffset * xPatch + _DEF_yPatchOffset * yPatch;
 	if (zero_space[0] <= xPos && xPos < zeroSpace[1] && zero_space[2] <= yPos && yPos < zero_space[3]) {
 		int yPosStored = yPos - _DEF_SIZE_HALF_F;
 		int xPosStored = xPos - _DEF_SIZE_HALF_F;
-		$2
+		$3
 	}
 	m4_dnl TODO: missing y and rest of it.
 	m4_dnl TODO: complete for the zeroSpace[4] way in X and use $2, $3, etc. to select the right way, but only as many arguments as needed.
@@ -139,9 +139,18 @@ __device__ _DEF_FFT_PRECISION(`C´) load_F_X_m_F_X(void* __restrict__ dataIn, si
 }
 
 __device__ void store_v_4_F_T_v_4_p_weight_half_v_1_X(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	_CALL_RESTRICT_WITH_PADDING(`X´, `element *= .5f * _CALL_GEWICHTUNG(`xPosStored - (_DEF_storedSizeX /2)´, `yPosStored - (_DEF_storedSizeX /2)´);
+	_CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `element *= .5f * _CALL_GEWICHTUNG(`xPosStored - (_DEF_storedSizeX /2)´, `yPosStored - (_DEF_storedSizeX /2)´);
 	atomicAdd(&((_DEF_FFT_PREISION(`R´)*) (dataOut))[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored], element);
 ´)
+}
+
+__device__ _DEF_FFT_PRECISION(`R´) load_x_p_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrit__ sharedPtr) {
+	_DEF_FFT_PRECISION(`R´) ret;
+	_CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `ret = ((_DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored];
+		ret *= _CALL_GEWICHTUNG(`xPosStored´, `yPosStored´);
+´) else
+		ret = 0;
+	return ret;
 }
 
 
