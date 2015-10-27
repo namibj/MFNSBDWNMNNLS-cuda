@@ -159,6 +159,12 @@ __device__ _DEF_FFT_PRECISION(`R´) load_f_X_1_F(void* __restrict__ dataIn, size
 }
 
 __device__ _DEF_FFT_PRECISION(`R´) load_v_3_X_T_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
-	_CALL_RESTRICT_WITH_PADDING(`X´, `X´, `return ((_DEF_FFT_PRECISION(`R´)*) (daaIn))[patchOffset + xPosStored * storedSizeX + yPosStored];´) else
+	_CALL_RESTRICT_WITH_PADDING(`X´, `X´, `return ((_DEF_FFT_PRECISION(`R´)*) (daaIn))[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored];´) else
 		return 0;
 }
+
+__device__ void store_f_X_y_p_v_1_F(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	_CALL_RESTRICT_WITH_PADDING(`X´, `X´, `atomicAdd(&((_DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored], element * ((float) (1. / (_DEF_FFT_SIZE * _DEF_FFT_SIZE))))´)
+}
+
+
