@@ -167,4 +167,8 @@ __device__ void store_f_X_y_p_v_1_F(void* __restrict__ dataOut, size_t offset, _
 	_CALL_RESTRICT_WITH_PADDING(`X´, `X´, `atomicAdd(&((_DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored], element * ((float) (1. / (_DEF_FFT_SIZE * _DEF_FFT_SIZE))))´)
 }
 
+__device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
+	((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (datOut))[offset], ((_DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);
+}
+
 
