@@ -153,4 +153,8 @@ __device__ _DEF_FFT_PRECISION(`R´) load_x_p_F(void* __restrict__ dataIn, size_t
 	return ret;
 }
 
+__device__ _DEF_FFT_PRECISION(`R´) load_f_X_1_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
+	_CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
+	return ((_DEF_FFT_PRECISION(`R´)*) dataIn)[(_DEF_SIZE_F * _DEF_SIZE_F) * patchNum + SIZE_F * xPosStoed + yPosStored];
+}
 
