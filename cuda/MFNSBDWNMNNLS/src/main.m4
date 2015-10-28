@@ -171,4 +171,8 @@ __device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, _
 	((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (datOut))[offset], ((_DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);
 }
 
+__device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restict__ callerInfo, void* __retrict__ sharedPointer) {
+	((_DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
+}
+
 
