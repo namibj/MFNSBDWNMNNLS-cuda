@@ -41,10 +41,10 @@ __global__ void  kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_b
 	m4_define(`_CALL_BUTTERFLY_REDUCTION´,`{ for( int i = 16; i >= 1; i /= 2) $1 += __shfl_xor($1, i 32);}´) m4_dnl Basic additive XOR butterfly reduction across current warp on the given argument
 	m4_define(`_CALL_BUTTERLFLY_BLOCK_REDUTCTION´, `{ //Reduction
 		_CALL_BUTTERFLY_REDCTION($1)
-		if(threadIdx.x%32==0) part_Sums[threadIdx.x / 32] = $1;
+		if(threadIdx.x%32==0) m4_ifelse(`s´, `$3´, `((float*) sharedPointer)[threadIdx.x / 32]´, `part_Sums[threadIdx.x / 32´) = $1;
 		__syncthreads();
 		if(threadIdx.x/32 == 0) {
-			$1 = part_Sums[threadIdx.x & 0x1f];
+			$1 = m4_ifelse(`s´, `$3´, `(threaIdx.x/32 > blockDim.x/32)? 0 : ((float*) sharedPointer)[threadIdx.x & 0x1f];´, `part_Sums[threadIdx.x & 0x1f];´)
 			_CALL_BUTTERFLY_REUCTION($1)
 			if (threadIdx.x%32) {$2}}´) m4_dnl whole 1024 Threads (in x index only) reduction across the block on $1, eecuting $2 at the end in the first thread of the block.
 	_CALL_BUTTERFLY_BLOCK_REDUCTION(`diff´, `f_n_part_sums[blockIdx.x] = diff;
@@ -174,5 +174,36 @@ __device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, _
 __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restict__ callerInfo, void* __retrict__ sharedPointer) {
 	((_DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
 }
+m4_define(`_CALL_´, `	struct store_f_X_T_1_informations (*inform_struct) =
+			(store_f_X_T_1_informations*) (callerInfo);
+	float nabla_tilde_f = 0;
+	float value;
+	float f;
+	float *vec_f_o = inform_struct->vec_f_o;
+	float *vec_f = vec_f_o;
+	float *vec_nabla_tilde_f_o = inform_struct->vec_nabla_f_o;
+	bool isF = true;
+	_CALL_RESTRICT_WITH_PADDING(`F´, `value = 0;
+		isF = false;
+		goto sumItUp;´)
+	int index = (_DEF_SIZE_F * _DEF_SIZE_F) * patchNum + _DEF_SIZE_F * xPosStored + yPosStored;
+	if (element > 0 &&  0 == vec_f_o[index])
+		nable_tilde_f = 0;
+	else
+		nabla_tilde_f = ((float) .5 / (_DEF_FFT_SIZE * _DEF_FFT_SIZE)) * element,
 
+	f = vec_f_o[index] - inform_struct->alpha * inform_struct->beta * nabla_tilde_f;
+	value = vec_nabla_tilde_f_o[index] * (vec_f_o[index] - vec_f[index]);
 
+	sumItUp:
+
+	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `inform_struct->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)
+
+	value = nabla_tilde_f * nabla_tilde_f;
+	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`inform_struct->abs_vec_nabla_f_part_sums[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;
+		inform_struct->block_num = gridDim.x * gridDim.y * gridDim.z;
+		inform_struct->block_size = blockDim.x * blockDim.y * blockDim.z;´, `s´)
+
+	if (isF)
+		vec_f_o[index] = f;
+}´)
