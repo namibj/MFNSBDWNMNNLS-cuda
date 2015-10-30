@@ -197,12 +197,12 @@ m4_define(`_CALL_´, `	struct store_f_X_T_1_informations (*inform_struct) =
 
 	sumItUp:
 
-	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `inform_struct->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)
+	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `inform_struct->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;
+	inform_struct->block_num = gridDim.x * gridDim.y * gridDim.z;
+		inform_struct->block_size = blockDim.x * blockDim.y * blockDim.z;´, `s´)
 
 	value = nabla_tilde_f * nabla_tilde_f;
-	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`inform_struct->abs_vec_nabla_f_part_sums[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;
-		inform_struct->block_num = gridDim.x * gridDim.y * gridDim.z;
-		inform_struct->block_size = blockDim.x * blockDim.y * blockDim.z;´, `s´)
+	m4_ifelse(`b´, `$2´, `_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`inform_struct->abs_vec_nabla_f_part_sums[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)´)
 
 	if (isF)
 		vec_f_o[index] = f;
