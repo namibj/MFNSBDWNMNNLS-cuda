@@ -11,6 +11,7 @@
 m4_define(`stop', `m4_dnl')
 m4_changequote(`[', `]') stop ´´
 m4_changequote([`], [´]
+define(`_CALL_APPEND´,`define(`_DEF_MYLIST´,ifdef(`_DEF_MYLIST´,`[changequote([,])_DEF_MYLIST[,$1]changequote(`,´)]´,[$1]))´)
 m4_define(`_DEF_concatVarSize´, eval(`1 ** 8´))
 m4_define(`_DEF_m´, eval(`10 * 2´))m4_dnl The non-monotonic NNLS solvers inner iteration count M, which has to be even.
 m4_define(`_DEF_N_target_optimization_F´, `1e-5´)m4_dnl The target value to get |\nabla f| to before stopping the optimizations of F
@@ -174,7 +175,7 @@ __device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, _
 __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restict__ callerInfo, void* __retrict__ sharedPointer) {
 	((_DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
 }
-m4_define(`_DEF_STORE_REDUCE_CALL´, `m4_ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)
+m4_define(`_DEF_STORE_REDUCE_CALL´, `m4_ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)´)
 m4_define(`_DEF_STORE_REDUCE_DEF´, `__device__ void _DEF_STORE_REDUCE_CALL(`$1$2´) (void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
 	struct store_f_X_T_1_informations (*inform_struct) =
 			(store_f_X_T_1_informations*) (callerInfo);
@@ -219,4 +220,13 @@ _DEF_STORE_REDUCE_DEF(2, 1)
 _DEF_STORE_REDUCE_DEF(2, 2)
 
 m4_dnl that have been all the function definitions for the device side, except the not refactored, but to be coded, device side reduction/summation code for those reductions previously done in host code (to seriously reduce host<->device traffic
-`
+m4_define(`_COMPOUND´, m4_ifelse(`L´, $1, `load´, `S´, `$1´, `store´)`_$3´)
+m4_define(`_CALL_ALLOC_CB´, `__device__ cufftCallback´m4_ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _d_´_COMPOUND($@)`cufftCallback´m4_ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _h_´_COMPOUND($@)`_$3;m4_divert(1)cudaMemcpyFromSymbol(&_h_´_COMPOUND($@)`, _d_´_COMPOUND($@)`, sizeof(_h_´_COMPOUND($@)`));
+m4_divert(0)´) stop ´)´)
+
+m4_dnl TODO: insert all the _CALL_ALLOC_CB
+
+void getCallbacks() {
+	m4_undivert(1)}
+
+
