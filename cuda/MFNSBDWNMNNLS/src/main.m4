@@ -174,7 +174,9 @@ __device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, _
 __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restict__ callerInfo, void* __retrict__ sharedPointer) {
 	((_DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
 }
-m4_define(`_CALL_´, `	struct store_f_X_T_1_informations (*inform_struct) =
+m4_define(`_DEF_STORE_REDUCE_CALL´, `m4_ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)
+m4_define(`_DEF_STORE_REDUCE_DEF´, `__device__ void _DEF_STORE_REDUCE_CALL(`$1$2´) (void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	struct store_f_X_T_1_informations (*inform_struct) =
 			(store_f_X_T_1_informations*) (callerInfo);
 	float nabla_tilde_f = 0;
 	float value;
@@ -202,8 +204,19 @@ m4_define(`_CALL_´, `	struct store_f_X_T_1_informations (*inform_struct) =
 		inform_struct->block_size = blockDim.x * blockDim.y * blockDim.z;´, `s´)
 
 	value = m4_ifelse(`1´, `$1´, `nabla_tilde_f * nabla_tilde_f;´, `element * element * ((float) 1. / (_DEF_FFT_SIZE * _DEF_FFT_SIZE * _DEF_FFT_SDIZE * _DEF_FFT_SIZE));´)
-	m4_ifelse(`b´, `$2´, `_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`m4_ifelse(`1´, `$1´, `inform_struct->abs_vec_nabla_f_part_sums´, `abs_vec_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)´)
+	m4_ifelse(`2´, `$2´, `_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`m4_ifelse(`1´, `$1´, `inform_struct->abs_vec_nabla_f_part_sums´, `abs_vec_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)´)
 
 	if (isF)
 		vec_f_o[index] = f;
 }´)
+
+_DEF_STORE_REDUCE_DEF(1, 2)
+
+_DEF_STORE_REDUCE_DEF(1, 1)
+
+_DEF_STORE_REDUCE_DEF(2, 1)
+
+_DEF_STORE_REDUCE_DEF(2, 2)
+
+m4_dnl that have been all the function definitions for the device side, except the not refactored, but to be coded, device side reduction/summation code for those reductions previously done in host code (to seriously reduce host<->device traffic
+`
