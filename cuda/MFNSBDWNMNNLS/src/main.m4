@@ -187,22 +187,22 @@ m4_define(`_CALL_´, `	struct store_f_X_T_1_informations (*inform_struct) =
 		isF = false;
 		goto sumItUp;´)
 	int index = (_DEF_SIZE_F * _DEF_SIZE_F) * patchNum + _DEF_SIZE_F * xPosStored + yPosStored;
-	if (element > 0 &&  0 == vec_f_o[index])
+	m4_ifelse(`1´, $1´, `if (element > 0 &&  0 == vec_f_o[index])
 		nable_tilde_f = 0;
 	else
 		nabla_tilde_f = ((float) .5 / (_DEF_FFT_SIZE * _DEF_FFT_SIZE)) * element,
 
 	f = vec_f_o[index] - inform_struct->alpha * inform_struct->beta * nabla_tilde_f;
-	value = vec_nabla_tilde_f_o[index] * (vec_f_o[index] - vec_f[index]);
+	value = vec_nabla_tilde_f_o[index] * (vec_f_o[index] - vec_f[index]);´, `value = inform_struct->vec_nabla_f_o[index] * element * ((float) 1. / (_DEF_FFT_SIZE * _DER_FFT_SIZE));´)
 
 	sumItUp:
 
-	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `inform_struct->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;
+	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `m4_ifelse(`1´, $1´, `inform_struct->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d´, `ìnform_struct->nabla_f_scalar_prod_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockDim.y + blockIdx.x] = value;
 	inform_struct->block_num = gridDim.x * gridDim.y * gridDim.z;
 		inform_struct->block_size = blockDim.x * blockDim.y * blockDim.z;´, `s´)
 
-	value = nabla_tilde_f * nabla_tilde_f;
-	m4_ifelse(`b´, `$2´, `_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`inform_struct->abs_vec_nabla_f_part_sums[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)´)
+	value = m4_ifelse(`1´, `$1´, `nabla_tilde_f * nabla_tilde_f;´, `element * element * ((float) 1. / (_DEF_FFT_SIZE * _DEF_FFT_SIZE * _DEF_FFT_SDIZE * _DEF_FFT_SIZE));´)
+	m4_ifelse(`b´, `$2´, `_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`m4_ifelse(`1´, `$1´, `inform_struct->abs_vec_nabla_f_part_sums´, `abs_vec_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)´)
 
 	if (isF)
 		vec_f_o[index] = f;
