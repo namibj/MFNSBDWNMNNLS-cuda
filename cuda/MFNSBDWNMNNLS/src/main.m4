@@ -20,6 +20,10 @@ m4_define(`_DEF_BETA_F´, `0.5´)m4_dnl The non-monotonic NNLS solvers tweaking 
 m4_define(`_DEF_SIGMA_F´, `0.5´)m4_dnl The non-monotonic NNLS solvers tweaking parameter σ
 m4_define(`_CALL_GEWICHTUNG´. `((1-abs(($1)- (0.5f * (_DEF_storedSizeX - 1))+0.5f)*(2.f/(_DEF_storedSizeX+1)))* (1-abs(($2)- (0.5f * (_DEF_storedSizeX - 1))+0.5f)*(2.f/(_DEF_storedSizeX+1))))´)m4_dnl The trusty macro to calculate the correct wheigh for a given coordinate
 m4_define(`_DEF_BLOCk_TOO_HIGH_THREADS_XY´, `if (blockIdx.x == gridDim.x -1 && threadIdx.x >= (((_DEF_PATCH_NUM_X + 1) * _DEF_storedSizeX / 2 m4_ifelse(`Y´, `$1´, `2 * _DEF_SIZE_HALF_F´)) * ((_DEF_PATCH_NUM_Y + 1) * _DEF_storedSizeX / 2 m4_ifelse(`Y´, `$1´, `2 * _DEF_SIZE_HALF_F´)) - (gridDim.x -1) * blockDim.x) -1)´) m4_dnl This is only the opening if(), not the {} nor an else
+m4_define(`_DEF_NUM_PATCHES´, m4_eval(`_DEF_NUM_PATCHES_X * _DEF_NUM_PATCHES_Y´) m4_dnl just the total count of patches
+m4_define(`_DEF_F_SQRD´, m4_eval(`_DEF_SIZE_F ** 2´)) m4_dnl the number of values in one f
+m4_define(`_DEF_NUM_F_VALS´, m4_eval(`_DEF_NUM_PATCHES * _DEF_F_SQRD´)) m4_dnl the total number of values of all f
+m4_define(`_DEF_SIZE_Y´, m4_eval(`(_DEF_storedSizeX / 2) ** 2 * (_DEF_NUM_PATCHES_X + 1) * (_DEF_NUM_PATCHES_Y + 1)´)) m4_dnl the number of elements in an y-space
 __global__ void kernel_set_float_zero(float* data, int lastBlockMax) {
 	if (blockIdx.x != (gridDim.x - 1) || threadIdx.x < lastBlockMax)
 		data[blockIdx.x * blockDim.x + threadIdx.x] = 0.f;
@@ -265,3 +269,32 @@ void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restric
 		informations->helper_struct_h->beta *= _DEF_BETA_F;
 	informations->f_o_h = informations->f_n_h;
 }
+
+int optimizeF(float* f_h, float* x_h, cudaStream_t stream) {
+	int dev;
+	m4_define(`_DEF_CU_MALLOC´, `$2* $1 = NULL;
+	cudaMalloc´m4_ifelse(`h´, `$4´, `Host´)`((void**) &$1, sizeof($2) * $3);´) m4_dnl $1 = [device] pointer name, $2 = [device] pointer type (without the '*'), $3 = number of elements to allocate[, $4 = h (to allocate host space)
+	m4_define(`_DEF_CU_MALLOC_HTDC´, `_DEF_CU_MALLOC($@)m4_ifelse(`´, `$7´,,`
+$7´)m4_divert(1)
+	cudaMemcpyAsync($1, $5, sizeof($2) * $3, cudaMemcpyHostToDevice, $6);m4_divert(0)´m4_ifelse(`´, `$8´,,`m4_divert(2)
+$8´`m4_divert(0)´) m4_dnl $1 = device pointer name, $2 = device pointer type (without the '*'), $3 = number of elements to allocate, $4 = '' (just jump with a double ','), $5 = host pointer name, $6 = stream, $7 = optional (somthing to execute after the allocation and before scheduling the copy for the bunch of copys, $8 = optional (to execute after copying)
+	_DEF_CU_MALLOC_HTDC(`f_d´, `float´, `_DEF_NUM_F_VALS´,, `f_h´, `stream´)
+	_DEF_CU_MALLOC_HTDC(`y_k_d´, `float´, `_DEF_SIZE_Y´,, `y_k_h´, `stream´)
+	_DEF_CU_MALLOC_HTDC(`helper_struct_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `_DEF_CU_MALLOC(`helper_Struct_h´, `store_f_X_T_1_informations´, 1, `h´)
+	helper_struct_h->alpha = 0.5;
+	helper_struct_h->beta = 0.5;´)
+	_DEF_CU_MALLOC(`helper_struct_h->vec_f_o´, `float´, `_DEF_NUM_F_VALS´)
+	_DEF_CU_MALLOC(`helper_struct_h->vec_nabla_f_o´, `float´, `_DEF_NUM_F_VALS´)
+	_DEF_CU_MALLOC(`x_p_d´, `_DEF_FFT_PRECISION(`C´)´, m4_eval(`_DEF_FFT_SIZE * (_DEF_FFT_SIZE / 2 + 1) * _DEF_NUM_PATCHES´))
+	_DEF_CU_MALLOC_HTDC(`v_3_d´, `float´, `_DEF_SIZE_Y´,,`x_h´, `stream´,,`cufftExecR2C(plan_x_p_F, x_d, x_p_d);
+	setFloatDeviceZero(v_3_d, `_DEF_SIZE_Y´, 128, stream);´)
+	_DEF_CU_MALLOC(`y_d´, `float´, `_DEF_SIZE_Y´)
+	_DEF_CU_MALLOC(`v_tmp_cmplx_d´, `_DEF_FFT_PRECISION(`C´)´, m4_eval(`_DEF_FFT_SIZE * (_DEF_FFT_SIZE / 2 + 1) * _DEF_NUM_PATCHES´))
+	_DEF_CU_MALLOC(`f_n_d´, `float´, 1)
+	_DEF_CU_MALLOC(`count_d´, `unsigned int´, 1)
+	_DEF_CU_MALLOC(`f_n_part_sums_d´, `float´, _CALL_ROUND_BLOCK_SIZE_UP(_DEF_SYZE_Y, 1024))
+	_DEF_CU_MALLOC(`(helper_struct_h->abs_vec_nabla_f_part_sums)´, `float´, _DEF_NUM_F_VALS)
+	_DEF_CU_MALLOC(`(helper_struct_h->abs_vec_delta_f_part_sums)´, `float´, _DEF_NUM_F_VALS)
+	_DEF_NUM_MALLOC(`(helper_Struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d)´, `float´, _DEF_NUM_F_VALS)
+	m4_dnl TODO: care and decide about helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums
+
