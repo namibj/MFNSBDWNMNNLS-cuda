@@ -11,7 +11,7 @@
 m4_define(`stop', `m4_dnl')
 m4_changequote(`[', `]') stop ´´
 m4_changequote([`], [´]
-define(`_CALL_APPEND´,`define(`_DEF_MYLIST´,ifdef(`_DEF_MYLIST´,`[changequote([,])_DEF_MYLIST[,$1]changequote(`,´)]´,[$1]))´)
+m4_dnl define(`_CALL_APPEND´,`define(`_DEF_MYLIST´,ifdef(`_DEF_MYLIST´,`[changequote([,])_DEF_MYLIST[,$1]changequote(`,´)]´,[$1]))´)
 m4_define(`_DEF_concatVarSize´, eval(`1 ** 8´))
 m4_define(`_DEF_m´, eval(`10 * 2´))m4_dnl The non-monotonic NNLS solvers inner iteration count M, which has to be even.
 m4_define(`_DEF_N_target_optimization_F´, `1e-5´)m4_dnl The target value to get |\nabla f| to before stopping the optimizations of F
@@ -228,5 +228,40 @@ m4_dnl TODO: insert all the _CALL_ALLOC_CB
 
 void getCallbacks() {
 	m4_undivert(1)}
+define(`_CALL_ROUND_BLOCK_SIZE_UP´, `((($1) % ($2) ? ($1) / ($2) : ($1) / ($2) + 1))´)
+int setFloatDeviceZero(float* data, size_t count, int blocksize, cudaStream_t stream) {
+	kernel_set_float_zero<<<_CALL_ROUND_BLOCK_SIZE_UP(`count´, `blocksize´), blocksize, 0, stream>>>(data, count % blocksize);
+	return 0;
+}
 
-
+void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restrict__ userData) {
+	struct streamCallback_information *informations = ((struct streamCallback_informations*) userData);
+	if (informations->b % 2 == 0) {
+		float abs_nabla_f = 0;
+		float delta_nabla_f = 0;
+		if (*(informations->f_n_h) < _DEF_N_SOLL_F) {
+			m4_dnl optimization is finished
+			informations->finished = true;
+			return;
+		}
+		for (int i=0; i < informations->helper_struct_b->block_num; i++) {
+			abs_nabla_f += informations->part_sums_var_h[i];
+			delta_nabla_f += informations->delta_nabla_f_part_sums_h[i];
+		}
+		informations->helper_struct_h->alpha = abs_nabla_f / delta_nabla_f;
+	} else {
+		float abs_delta_f = 0;
+		float delta_nabla_f = 0;
+		for (int i = 0; i < informations->helper_struct_h->block_um; i++) {
+			abs_delta_f += informations->part_sums_var_h[i];
+			delta_nabla_f += informations->delta_nabla_f_part_sums_h[i];
+		}
+		informations->helper_struct_h->alpha = delta_nabla_f / abs_delta_f;
+	}
+	float complicatedSums = 0;
+	for (int i = 0; i < informations->heler_struct_h->block_num; i++) {
+		complicatedSums += (informations->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h)[i];
+	if (informations->f_o_h - informations->f_n_h <= _DEF_SIGMA_F * complicatetSums)
+		informations->helper_struct_h->beta *= _DEF_BETA_F;
+	informations->f_o_h = informations->f_n_h;
+}
