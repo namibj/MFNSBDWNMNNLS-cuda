@@ -8,22 +8,22 @@
 #include <cuda_runtime_api.h>
 #include <math.h>
 #include <driver_functions.h>
-m4_define(`stop', `m4_dnl')
-m4_changequote(`[', `]') stop ´´
-m4_changequote([`], [´]
-m4_dnl define(`_CALL_APPEND´,`define(`_DEF_MYLIST´,ifdef(`_DEF_MYLIST´,`[changequote([,])_DEF_MYLIST[,$1]changequote(`,´)]´,[$1]))´)
-m4_define(`_DEF_concatVarSize´, eval(`1 ** 8´))
-m4_define(`_DEF_m´, eval(`10 * 2´))m4_dnl The non-monotonic NNLS solvers inner iteration count M, which has to be even.
-m4_define(`_DEF_N_target_optimization_F´, `1e-5´)m4_dnl The target value to get |\nabla f| to before stopping the optimizations of F
-m4_define(`_DEF_N_target_optimization_X´, `1e-40´)m4_dnl The target value to get |\nabla f| to before stopping the optimizations of X
-m4_define(`_DEF_BETA_F´, `0.5´)m4_dnl The non-monotonic NNLS solvers tweaking parameter β
-m4_define(`_DEF_SIGMA_F´, `0.5´)m4_dnl The non-monotonic NNLS solvers tweaking parameter σ
-m4_define(`_CALL_GEWICHTUNG´. `((1-abs(($1)- (0.5f * (_DEF_storedSizeX - 1))+0.5f)*(2.f/(_DEF_storedSizeX+1)))* (1-abs(($2)- (0.5f * (_DEF_storedSizeX - 1))+0.5f)*(2.f/(_DEF_storedSizeX+1))))´)m4_dnl The trusty macro to calculate the correct wheigh for a given coordinate
-m4_define(`_DEF_BLOCk_TOO_HIGH_THREADS_XY´, `if (blockIdx.x == gridDim.x -1 && threadIdx.x >= (((_DEF_PATCH_NUM_X + 1) * _DEF_storedSizeX / 2 m4_ifelse(`Y´, `$1´, `2 * _DEF_SIZE_HALF_F´)) * ((_DEF_PATCH_NUM_Y + 1) * _DEF_storedSizeX / 2 m4_ifelse(`Y´, `$1´, `2 * _DEF_SIZE_HALF_F´)) - (gridDim.x -1) * blockDim.x) -1)´) m4_dnl This is only the opening if(), not the {} nor an else
-m4_define(`_DEF_NUM_PATCHES´, m4_eval(`_DEF_NUM_PATCHES_X * _DEF_NUM_PATCHES_Y´) m4_dnl just the total count of patches
-m4_define(`_DEF_F_SQRD´, m4_eval(`_DEF_SIZE_F ** 2´)) m4_dnl the number of values in one f
-m4_define(`_DEF_NUM_F_VALS´, m4_eval(`_DEF_NUM_PATCHES * _DEF_F_SQRD´)) m4_dnl the total number of values of all f
-m4_define(`_DEF_SIZE_Y´, m4_eval(`(_DEF_storedSizeX / 2) ** 2 * (_DEF_NUM_PATCHES_X + 1) * (_DEF_NUM_PATCHES_Y + 1)´)) m4_dnl the number of elements in an y-space
+@define(`stop', `@dnl°')
+@changequote(`[', `]') stop ´´
+@changequote([`], [´]
+@dnl° define(`@CALL_APPEND´,`define(`@DEF_MYLIST°´,ifdef(`@DEF_MYLIST°´,`[changequote([,])@DEF_MYLIST°[,$1]changequote(`,´)]´,[$1]))´)
+@define(`@DEF_concatVarSize°´, eval(`1 ** 8´))
+@define(`@DEF_m°´, eval(`10 * 2´))@dnl° The non-monotonic NNLS solvers inner iteration count M, which has to be even.
+@define(`@DEF_N_target_optimization_F°´, `1e-5´)@dnl° The target value to get |\nabla f| to before stopping the optimizations of F
+@define(`@DEF_N_target_optimization_X°´, `1e-40´)@dnl° The target value to get |\nabla f| to before stopping the optimizations of X
+@define(`@DEF_BETA_F°´, `0.5´)@dnl° The non-monotonic NNLS solvers tweaking parameter β
+@define(`@DEF_SIGMA_F°´, `0.5´)@dnl° The non-monotonic NNLS solvers tweaking parameter σ
+@define(`@CALL_GEWICHTUNG´. `((1-abs(($1)- (0.5f * (@DEF_storedSizeX° - 1))+0.5f)*(2.f/(@DEF_storedSizeX°+1)))* (1-abs(($2)- (0.5f * (@DEF_storedSizeX° - 1))+0.5f)*(2.f/(@DEF_storedSizeX°+1))))´)@dnl° The trusty macro to calculate the correct wheigh for a given coordinate
+@define(`@DEF_BLOCk_TOO_HIGH_THREADS_XY°´, `if (blockIdx.x == gridDim.x -1 && threadIdx.x >= (((@DEF_PATCH_NUM_X° + 1) * @DEF_storedSizeX° / 2 @ifelse(`Y´, `$1´, `2 * @DEF_SIZE_HALF_F°´)) * ((@DEF_PATCH_NUM_Y° + 1) * @DEF_storedSizeX° / 2 @ifelse(`Y´, `$1´, `2 * @DEF_SIZE_HALF_F°´)) - (gridDim.x -1) * blockDim.x) -1)´) @dnl° This is only the opening if(), not the {} nor an else
+@define(`@DEF_NUM_PATCHES°´, @eval(`@DEF_NUM_PATCHES_X° * @DEF_NUM_PATCHES_Y°´) @dnl° just the total count of patches
+@define(`@DEF_F_SQRD°´, @eval(`@DEF_SIZE_F° ** 2´)) @dnl° the number of values in one f
+@define(`@DEF_NUM_F_VALS°´, @eval(`@DEF_NUM_PATCHES° * @DEF_F_SQRD°´)) @dnl° the total number of values of all f
+@define(`@DEF_SIZE_Y°´, @eval(`(@DEF_storedSizeX° / 2) ** 2 * (@DEF_NUM_PATCHES_X° + 1) * (@DEF_NUM_PATCHES_Y° + 1)´)) @dnl° the number of elements in an y-space
 __global__ void kernel_set_float_zero(float* data, int lastBlockMax) {
 	if (blockIdx.x != (gridDim.x - 1) || threadIdx.x < lastBlockMax)
 		data[blockIdx.x * blockDim.x + threadIdx.x] = 0.f;
@@ -37,25 +37,25 @@ __global__ void  kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_b
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	float diff;
 	float value;
-	_DEF_BLOCK_TOO_HIGH_THREADS_XY(`Y´)
+	@DEF_BLOCK_TOO_HIGH_THREADS_XY(`Y´)
 		diff = 0;
 	else {
 		diff = y[index] - y_k[index];
 		v_3[index] = diff;
 	}
-	m4_define(`_CALL_BUTTERFLY_REDUCTION´,`{ for( int i = 16; i >= 1; i /= 2) $1 += __shfl_xor($1, i 32);}´) m4_dnl Basic additive XOR butterfly reduction across current warp on the given argument
-	m4_define(`_CALL_BUTTERLFLY_BLOCK_REDUTCTION´, `{ //Reduction
-		_CALL_BUTTERFLY_REDCTION($1)
-		if(threadIdx.x%32==0) m4_ifelse(`s´, `$3´, `((float*) sharedPointer)[threadIdx.x / 32]´, `part_Sums[threadIdx.x / 32´) = $1;
+	@define(`@CALL_BUTTERFLY_REDUCTION´,`{ for( int i = 16; i >= 1; i /= 2) $1 += __shfl_xor($1, i 32);}´) @dnl° Basic additive XOR butterfly reduction across current warp on the given argument
+	@define(`@CALL_BUTTERLFLY_BLOCK_REDUTCTION´, `{ //Reduction
+		@CALL_BUTTERFLY_REDCTION($1)
+		if(threadIdx.x%32==0) @ifelse(`s´, `$3´, `((float*) sharedPointer)[threadIdx.x / 32]´, `part_Sums[threadIdx.x / 32´) = $1;
 		__syncthreads();
 		if(threadIdx.x/32 == 0) {
-			$1 = m4_ifelse(`s´, `$3´, `(threaIdx.x/32 > blockDim.x/32)? 0 : ((float*) sharedPointer)[threadIdx.x & 0x1f];´, `part_Sums[threadIdx.x & 0x1f];´)
-			_CALL_BUTTERFLY_REUCTION($1)
-			if (threadIdx.x%32) {$2}}´) m4_dnl whole 1024 Threads (in x index only) reduction across the block on $1, eecuting $2 at the end in the first thread of the block.
-	_CALL_BUTTERFLY_BLOCK_REDUCTION(`diff´, `f_n_part_sums[blockIdx.x] = diff;
+			$1 = @ifelse(`s´, `$3´, `(threaIdx.x/32 > blockDim.x/32)? 0 : ((float*) sharedPointer)[threadIdx.x & 0x1f];´, `part_Sums[threadIdx.x & 0x1f];´)
+			@CALL_BUTTERFLY_REUCTION($1)
+			if (threadIdx.x%32) {$2}}´) @dnl° whole 1024 Threads (in x index only) reduction across the block on $1, eecuting $2 at the end in the first thread of the block.
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`diff´, `f_n_part_sums[blockIdx.x] = diff;
 		__threadfence();
 		unsigned int value = atomicInc(count, gridDim.x);
-		isLastBlockDone = (value == (gridDim.x - 1));´) m4_dnl use that reduction!
+		isLastBlockDone = (value == (gridDim.x - 1));´) @dnl° use that reduction!
 	__syncthreads();
 	if (isLastBlockDone) {
 		if (gridDim.x >  blockDim.x) {
@@ -64,123 +64,123 @@ __global__ void  kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_b
 			for (int x=0; (gridDim.x % blokDim.x) == 0 ? x < (gridDim.x / blockDim.x) : x <= (gridDim.x / blockDim.x); x++)
 				value += (gridDim.x % blockDim.x) == 0 || threadIdx.x * blockDim.x < gridDim.x ? f_n_part_sums[threadIdx.x * blockDim.x] : 0;
 		}
-		_CALL_BUTTERFLY_BLOCK_REDUCION(value, `*f_n = value;
-		*count = 0;´) m4_dnl reduction across the partial sums
+		@CALL_BUTTERFLY_BLOCK_REDUCION(value, `*f_n = value;
+		*count = 0;´) @dnl° reduction across the partial sums
 	}
 }
 
 __global__ void kernel_nabla_tilde_Gets_nabla_capped_with_rule( float* __restrict__ vec_nabla_tide_f, float* __restrict__ vec_nabla_f, float* __restrict__ vec_X) {
-	_DEF_BLOCK_TOO_HIGH_THEADS_XY(`X´)
+	@DEF_BLOCK_TOO_HIGH_THEADS_XY(`X´)
 		return;
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 	vec_nabla_tilde_f[i] = (0 < vec_nabla_f[i] && 0 == vec_x[i]) ? 0 : vec_nabla_f[i];
 }
 
-__device__ _DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ shared_Ptr) {
-	m4_define(`_CALL_SPLIT_concatVar´, `int xPos = (offset / _DEF_concatVarSize) & _DEF_SIZE_concatVarSize;
-	int yPos = offset & _DEF_concatVarSize;
-	int patchNum = offset / _DEF_cpncatVarSize / _DEF_concatVarSize;´)
-	m4_define(`_DEF_xPatchOffset´, m4_eval(((_DEF_storedSizeX ** 2) * (_DEF_NUM_PATCHES_Y + 1)) / 2))
-	m4_define(`_DEF_yPatchOffset´, m4_eval(_DEF_storedSizeX / 2))
-	m4_define(`_CALL_RESTRICT_WITH_PADDING´, `_CALL_SPLIT_concatVar
-	m4_ifelse(`F´, `$1´, `int xPosStored, yPosStored;
-	if (xPos <= _DEF_SIZE_HALF_F) { m4_dnl lower valid end
-		xPosStored = xPos + _DEF_SIZE_HALF_F;
-	} else if (_DEF_FFT_SIZE - _DEF_SIZE_HALF_F <= xPos) { m4_dnl upper valid end
-		xPosStored = xPos + _DEF_SIZE_HALF_F - _DEF_FFT_SIZE;
+__device__ @DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ shared_Ptr) {
+	@define(`@CALL_SPLIT_concatVar´, `int xPos = (offset / @DEF_concatVarSize°) & @DEF_SIZE_concatVarSize°;
+	int yPos = offset & @DEF_concatVarSize°;
+	int patchNum = offset / @DEF_cpncatVarSize° / @DEF_concatVarSize°;´)
+	@define(`@DEF_xPatchOffset°´, @eval(((@DEF_storedSizeX° ** 2) * (@DEF_NUM_PATCHES_Y° + 1)) / 2))
+	@define(`@DEF_yPatchOffset°´, @eval(@DEF_storedSizeX° / 2))
+	@define(`@CALL_RESTRICT_WITH_PADDING´, `@CALL_SPLIT_concatVar
+	@ifelse(`F´, `$1´, `int xPosStored, yPosStored;
+	if (xPos <= @DEF_SIZE_HALF_F°) { @dnl° lower valid end
+		xPosStored = xPos + @DEF_SIZE_HALF_F°;
+	} else if (@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F° <= xPos) { @dnl° upper valid end
+		xPosStored = xPos + @DEF_SIZE_HALF_F° - @DEF_FFT_SIZE°;
 	} else {
 		$2
 	}
-	if (yPos <= _DEF_SIZE_HALF_F) {  m4_dnl lower valid end
-		yPosStored = yPos + _DEF_SIZE_HALF_F;
-	} else if (_DEF_FFT_SIZE - _DEF_SIZE_HALF_F <= yPos) { m4_dnl upper valid end
-		yPosStored = yPos + _DEF_SIZE_HALF_F - _DEF_FFT_SIZE;
+	if (yPos <= @DEF_SIZE_HALF_F°) {  @dnl° lower valid end
+		yPosStored = yPos + @DEF_SIZE_HALF_F°;
+	} else if (@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F° <= yPos) { @dnl° upper valid end
+		yPosStored = yPos + @DEF_SIZE_HALF_F° - @DEF_FFT_SIZE°;
 	} else {
 		$2
-	}´, `X´, `$1´, `int zero_space[4]; m4_dnl 0 <= x < 1 && 2 <= y < 3
-	int xPatch = patchNum / _DEF_NUM_PATCHES_Y;
-	int yPatch = patchNum - xPatch * _DEF_NUM_PATCHES_Y;
-	if(0 == xPatch) { m4_dnl x = 0 border
-		zero_space[0] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX / 2));
-		zero_space[1] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
-	} else if (_DEF_NUM_PATCHES_Y - 1 == xPatch) { m4_dnl x = MAX border
-		zero_space[0] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
-		zero_space[1] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX / 2));
-	} else { m4_dnl  no x border
-		zero_space[0] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
-		zero_space[1] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
+	}´, `X´, `$1´, `int zero_space[4]; @dnl° 0 <= x < 1 && 2 <= y < 3
+	int xPatch = patchNum / @DEF_NUM_PATCHES_Y°;
+	int yPatch = patchNum - xPatch * @DEF_NUM_PATCHES_Y°;
+	if(0 == xPatch) { @dnl° x = 0 border
+		zero_space[0] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2));
+		zero_space[1] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
+	} else if (@DEF_NUM_PATCHES_Y° - 1 == xPatch) { @dnl° x = MAX border
+		zero_space[0] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[1] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2));
+	} else { @dnl°  no x border
+		zero_space[0] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[1] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
 	}
 
-	if (0 == yPatch) { m4_dnl y = 0 border
-		zero_space[2] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX /2));
-		zero_space[3] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
-	} else if (_DEF_NUM_PATCHES_X - 1 == yPatch) { m4_dnl y = MAX border
-		zero_space[2] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
-		zero_space[3] = m4_eval(_DEF_SIZE_HALF_F + (_DEF_storedSizeX /2));
-	} else { m4_dnl no y border
-		zero_space[2] = m4_ifelse(`Y´, `$2´, `0´, `X´, `$2´, `_DEF_SIZE_HALF_F´);
-		zero_space[3] = m4_ifelse(`Y´, `$2´, `_DEF_FFT_SIZE´, `X´, `$2´, `m4_eval(_DEF_SIZE_HALF_F + _DEF_storedSizeX)´);
+	if (0 == yPatch) { @dnl° y = 0 border
+		zero_space[2] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° /2));
+		zero_space[3] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
+	} else if (@DEF_NUM_PATCHES_X° - 1 == yPatch) { @dnl° y = MAX border
+		zero_space[2] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[3] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° /2));
+	} else { @dnl° no y border
+		zero_space[2] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[3] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
 	}
 
-	int patcOffset = _DEF_xPatchOffset * xPatch + _DEF_yPatchOffset * yPatch;
+	int patcOffset = @DEF_xPatchOffset° * xPatch + @DEF_yPatchOffset° * yPatch;
 	if (zero_space[0] <= xPos && xPos < zeroSpace[1] && zero_space[2] <= yPos && yPos < zero_space[3]) {
-		int yPosStored = yPos - _DEF_SIZE_HALF_F;
-		int xPosStored = xPos - _DEF_SIZE_HALF_F;
+		int yPosStored = yPos - @DEF_SIZE_HALF_F°;
+		int xPosStored = xPos - @DEF_SIZE_HALF_F°;
 		$3
 	}
-	m4_dnl TODO: missing y and rest of it.
-	m4_dnl TODO: complete for the zeroSpace[4] way in X and use $2, $3, etc. to select the right way, but only as many arguments as needed.
+	@dnl° TODO: missing y and rest of it.
+	@dnl° TODO: complete for the zeroSpace[4] way in X and use $2, $3, etc. to select the right way, but only as many arguments as needed.
 	´)´)
-	_CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
-	return ((_DEF_FFT_PRECISION(`R´)*) dataIn)[(_DEF_SIZE_F * _DEF_SIZE_F) *  patchNum + _DEF_SIZE_F * xPosStored + yPosStored] * _CALL_GEWICHTUNG(`xPos - _DEF_SIZE_HALF_F - (_DEF_storedSizeX/2)´, `yPos - _DEF_SIZE_HALF_F - (_DEF_storedSizeX/2)´);
+	@CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
+	return ((@DEF_FFT_PRECISION(`R´)*) dataIn)[(@DEF_SIZE_F° * @DEF_SIZE_F°) *  patchNum + @DEF_SIZE_F° * xPosStored + yPosStored] * @CALL_GEWICHTUNG(`xPos - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX°/2)´, `yPos - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX°/2)´);
 }
 
-__device__ void store_f_T_p_conj_fft_X(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = m4_ifelse(`float´, _DEF_FFT_PRECISION_TYPE, `cuConjf´, `double´, _DEF_FFT_PRECISION_TYPE, `cuConj´)(elment); m4_dnl TODO: insert right cmmand/
+__device__ void store_f_T_p_conj_fft_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	((@DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = @ifelse(`float´, @DEF_FFT_PRECISION_TYPE°, `cuConjf´, `double´, @DEF_FFT_PRECISION_TYPE°, `cuConj´)(elment); @dnl° TODO: insert right cmmand/
 }
 
-__device__ _DEF_FFT_PRECISION(`C´) load_F_X_m_F_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
-	return m4_ifelse(`float´, _DEF_FFT_PRECISION_TYPE, `cuCmulf´)(((_DEF_FFT_PREC ISION(`C´)*) (dataIn))[offset], ((_DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);  m4_dnl TODO: include double precision as an option for the commplex multipliction.
+__device__ @DEF_FFT_PRECISION(`C´) load_F_X_m_F_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
+	return @ifelse(`float´, @DEF_FFT_PRECISION_TYPE°, `cuCmulf´)(((@DEF_FFT_PREC° ISION(`C´)*) (dataIn))[offset], ((@DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);  @dnl° TODO: include double precision as an option for the commplex multipliction.
 }
 
-__device__ void store_v_4_F_T_v_4_p_weight_half_v_1_X(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	_CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `element *= .5f * _CALL_GEWICHTUNG(`xPosStored - (_DEF_storedSizeX /2)´, `yPosStored - (_DEF_storedSizeX /2)´);
-	atomicAdd(&((_DEF_FFT_PREISION(`R´)*) (dataOut))[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored], element);
+__device__ void store_v_4_F_T_v_4_p_weight_half_v_1_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `element *= .5f * @CALL_GEWICHTUNG(`xPosStored - (@DEF_storedSizeX° /2)´, `yPosStored - (@DEF_storedSizeX° /2)´);
+	atomicAdd(&((@DEF_FFT_PREISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element);
 ´)
 }
 
-__device__ _DEF_FFT_PRECISION(`R´) load_x_p_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrit__ sharedPtr) {
-	_DEF_FFT_PRECISION(`R´) ret;
-	_CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `ret = ((_DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored];
-		ret *= _CALL_GEWICHTUNG(`xPosStored´, `yPosStored´);
+__device__ @DEF_FFT_PRECISION(`R´) load_x_p_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrit__ sharedPtr) {
+	@DEF_FFT_PRECISION(`R´) ret;
+	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `ret = ((@DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];
+		ret *= @CALL_GEWICHTUNG(`xPosStored´, `yPosStored´);
 ´) else
 		ret = 0;
 	return ret;
 }
 
-__device__ _DEF_FFT_PRECISION(`R´) load_f_X_1_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
-	_CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
-	return ((_DEF_FFT_PRECISION(`R´)*) dataIn)[(_DEF_SIZE_F * _DEF_SIZE_F) * patchNum + SIZE_F * xPosStoed + yPosStored];
+__device__ @DEF_FFT_PRECISION(`R´) load_f_X_1_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
+	@CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
+	return ((@DEF_FFT_PRECISION(`R´)*) dataIn)[(@DEF_SIZE_F° * @DEF_SIZE_F°) * patchNum + SIZE_F * xPosStoed + yPosStored];
 }
 
-__device__ _DEF_FFT_PRECISION(`R´) load_v_3_X_T_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
-	_CALL_RESTRICT_WITH_PADDING(`X´, `X´, `return ((_DEF_FFT_PRECISION(`R´)*) (daaIn))[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored];´) else
+__device__ @DEF_FFT_PRECISION(`R´) load_v_3_X_T_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
+	@CALL_RESTRICT_WITH_PADDING(`X´, `X´, `return ((@DEF_FFT_PRECISION(`R´)*) (daaIn))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];´) else
 		return 0;
 }
 
-__device__ void store_f_X_y_p_v_1_F(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	_CALL_RESTRICT_WITH_PADDING(`X´, `X´, `atomicAdd(&((_DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * _DEF_storedSizeX + yPosStored], element * ((float) (1. / (_DEF_FFT_SIZE * _DEF_FFT_SIZE))))´)
+__device__ void store_f_X_y_p_v_1_F(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	@CALL_RESTRICT_WITH_PADDING(`X´, `X´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
 }
 
-__device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
-	((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (datOut))[offset], ((_DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);
+__device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
+	((@DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = cuCmulf(((@DEF_FFT_PRECISION(`C´)*) (datOut))[offset], ((@DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);
 }
 
-__device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`C´) element, void* __restict__ callerInfo, void* __retrict__ sharedPointer) {
-	((_DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((_DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
+__device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`C´) element, void* __restict__ callerInfo, void* __retrict__ sharedPointer) {
+	((@DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((@DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
 }
-m4_define(`_DEF_STORE_REDUCE_CALL´, `m4_ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)´)
-m4_define(`_DEF_STORE_REDUCE_DEF´, `__device__ void _DEF_STORE_REDUCE_CALL(`$1$2´) (void* __restrict__ dataOut, size_t offset, _DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+@define(`@DEF_STORE_REDUCE@CALL°´, `@ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)´)
+@define(`@DEF_STORE_REDUCE_DEF°´, `__device__ void @DEF_STORE_REDUCE@CALL(`$1$2´) (void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
 	struct store_f_X_T_1_informations (*inform_struct) =
 			(store_f_X_T_1_informations*) (callerInfo);
 	float nabla_tilde_f = 0;
@@ -190,51 +190,51 @@ m4_define(`_DEF_STORE_REDUCE_DEF´, `__device__ void _DEF_STORE_REDUCE_CALL(`$1$
 	float *vec_f = vec_f_o;
 	float *vec_nabla_tilde_f_o = inform_struct->vec_nabla_f_o;
 	bool isF = true;
-	_CALL_RESTRICT_WITH_PADDING(`F´, `value = 0;
+	@CALL_RESTRICT_WITH_PADDING(`F´, `value = 0;
 		isF = false;
 		goto sumItUp;´)
-	int index = (_DEF_SIZE_F * _DEF_SIZE_F) * patchNum + _DEF_SIZE_F * xPosStored + yPosStored;
-	m4_ifelse(`1´, $1´, `if (element > 0 &&  0 == vec_f_o[index])
+	int index = (@DEF_SIZE_F° * @DEF_SIZE_F°) * patchNum + @DEF_SIZE_F° * xPosStored + yPosStored;
+	@ifelse(`1´, $1´, `if (element > 0 &&  0 == vec_f_o[index])
 		nable_tilde_f = 0;
 	else
-		nabla_tilde_f = ((float) .5 / (_DEF_FFT_SIZE * _DEF_FFT_SIZE)) * element,
+		nabla_tilde_f = ((float) .5 / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°)) * element,
 
 	f = vec_f_o[index] - inform_struct->alpha * inform_struct->beta * nabla_tilde_f;
-	value = vec_nabla_tilde_f_o[index] * (vec_f_o[index] - vec_f[index]);´, `value = inform_struct->vec_nabla_f_o[index] * element * ((float) 1. / (_DEF_FFT_SIZE * _DER_FFT_SIZE));´)
+	value = vec_nabla_tilde_f_o[index] * (vec_f_o[index] - vec_f[index]);´, `value = inform_struct->vec_nabla_f_o[index] * element * ((float) 1. / (@DEF_FFT_SIZE° * _DER_FFT_SIZE));´)
 
 	sumItUp:
 
-	_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `m4_ifelse(`1´, $1´, `inform_struct->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d´, `ìnform_struct->nabla_f_scalar_prod_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockDim.y + blockIdx.x] = value;
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `@ifelse(`1´, $1´, `inform_struct->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d´, `ìnform_struct->nabla_f_scalar_prod_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockDim.y + blockIdx.x] = value;
 	inform_struct->block_num = gridDim.x * gridDim.y * gridDim.z;
 		inform_struct->block_size = blockDim.x * blockDim.y * blockDim.z;´, `s´)
 
-	value = m4_ifelse(`1´, `$1´, `nabla_tilde_f * nabla_tilde_f;´, `element * element * ((float) 1. / (_DEF_FFT_SIZE * _DEF_FFT_SIZE * _DEF_FFT_SDIZE * _DEF_FFT_SIZE));´)
-	m4_ifelse(`2´, `$2´, `_CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`m4_ifelse(`1´, `$1´, `inform_struct->abs_vec_nabla_f_part_sums´, `abs_vec_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)´)
+	value = @ifelse(`1´, `$1´, `nabla_tilde_f * nabla_tilde_f;´, `element * element * ((float) 1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE° * @DEF_FFT_SDIZE° * @DEF_FFT_SIZE°));´)
+	@ifelse(`2´, `$2´, `@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, 	`@ifelse(`1´, `$1´, `inform_struct->abs_vec_nabla_f_part_sums´, `abs_vec_delta_f_part_sums´)[gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x] = value;´, `s´)´)
 
 	if (isF)
 		vec_f_o[index] = f;
 }´)
 
-_DEF_STORE_REDUCE_DEF(1, 2)
+@DEF_STORE_REDUCE@DEF°(1, 2)
 
-_DEF_STORE_REDUCE_DEF(1, 1)
+@DEF_STORE_REDUCE@DEF°(1, 1)
 
-_DEF_STORE_REDUCE_DEF(2, 1)
+@DEF_STORE_REDUCE@DEF°(2, 1)
 
-_DEF_STORE_REDUCE_DEF(2, 2)
+@DEF_STORE_REDUCE@DEF°(2, 2)
 
-m4_dnl that have been all the function definitions for the device side, except the not refactored, but to be coded, device side reduction/summation code for those reductions previously done in host code (to seriously reduce host<->device traffic
-m4_define(`_COMPOUND´, m4_ifelse(`L´, $1, `load´, `S´, `$1´, `store´)`_$3´)
-m4_define(`_CALL_ALLOC_CB´, `__device__ cufftCallback´m4_ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _d_´_COMPOUND($@)`cufftCallback´m4_ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _h_´_COMPOUND($@)`_$3;m4_divert(1)cudaMemcpyFromSymbol(&_h_´_COMPOUND($@)`, _d_´_COMPOUND($@)`, sizeof(_h_´_COMPOUND($@)`));
-m4_divert(0)´) stop ´)´)
+@dnl° that have been all the function definitions for the device side, except the not refactored, but to be coded, device side reduction/summation code for those reductions previously done in host code (to seriously reduce host<->device traffic
+@define(`_COMPOUND´, @ifelse(`L´, $1, `load´, `S´, `$1´, `store´)`_$3´)
+@define(`@CALL_ALLOC_CB´, `__device__ cufftCallback´@ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _d_´_COMPOUND($@)`cufftCallback´@ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _h_´_COMPOUND($@)`_$3;@divert(1)cudaMemcpyFromSymbol(&_h_´_COMPOUND($@)`, _d_´_COMPOUND($@)`, sizeof(_h_´_COMPOUND($@)`));
+@divert(0)´) stop ´)´)
 
-m4_dnl TODO: insert all the _CALL_ALLOC_CB
+@dnl° TODO: insert all the @CALL_ALLOC_CB
 
 void getCallbacks() {
-	m4_undivert(1)}
-define(`_CALL_ROUND_BLOCK_SIZE_UP´, `((($1) % ($2) ? ($1) / ($2) : ($1) / ($2) + 1))´)
+	@undivert(1)}
+define(`@CALL_ROUND_BLOCK_SIZE_UP´, `((($1) % ($2) ? ($1) / ($2) : ($1) / ($2) + 1))´)
 int setFloatDeviceZero(float* data, size_t count, int blocksize, cudaStream_t stream) {
-	kernel_set_float_zero<<<_CALL_ROUND_BLOCK_SIZE_UP(`count´, `blocksize´), blocksize, 0, stream>>>(data, count % blocksize);
+	kernel_set_float_zero<<<@CALL_ROUND_BLOCK_SIZE_UP(`count´, `blocksize´), blocksize, 0, stream>>>(data, count % blocksize);
 	return 0;
 }
 
@@ -243,8 +243,8 @@ void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restric
 	if (informations->b % 2 == 0) {
 		float abs_nabla_f = 0;
 		float delta_nabla_f = 0;
-		if (*(informations->f_n_h) < _DEF_N_SOLL_F) {
-			m4_dnl optimization is finished
+		if (*(informations->f_n_h) < @DEF_N_SOLL_F°) {
+			@dnl° optimization is finished
 			informations->finished = true;
 			return;
 		}
@@ -265,36 +265,61 @@ void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restric
 	float complicatedSums = 0;
 	for (int i = 0; i < informations->heler_struct_h->block_num; i++) {
 		complicatedSums += (informations->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h)[i];
-	if (informations->f_o_h - informations->f_n_h <= _DEF_SIGMA_F * complicatetSums)
-		informations->helper_struct_h->beta *= _DEF_BETA_F;
+	if (informations->f_o_h - informations->f_n_h <= @DEF_SIGMA_F° * complicatetSums)
+		informations->helper_struct_h->beta *= @DEF_BETA_F°;
 	informations->f_o_h = informations->f_n_h;
 }
 
 int optimizeF(float* f_h, float* x_h, cudaStream_t stream) {
 	int dev;
-	m4_define(`_DEF_CU_MALLOC´, `$2* $1 = NULL;
-	cudaMalloc´m4_ifelse(`h´, `$4´, `Host´)`((void**) &$1, sizeof($2) * $3);´) m4_dnl $1 = [device] pointer name, $2 = [device] pointer type (without the '*'), $3 = number of elements to allocate[, $4 = h (to allocate host space)
-	m4_define(`_DEF_CU_MALLOC_HTDC´, `_DEF_CU_MALLOC($@)m4_ifelse(`´, `$7´,,`
-$7´)m4_divert(1)
-	cudaMemcpyAsync($1, $5, sizeof($2) * $3, cudaMemcpyHostToDevice, $6);m4_divert(0)´m4_ifelse(`´, `$8´,,`m4_divert(2)
-$8´`m4_divert(0)´) m4_dnl $1 = device pointer name, $2 = device pointer type (without the '*'), $3 = number of elements to allocate, $4 = '' (just jump with a double ','), $5 = host pointer name, $6 = stream, $7 = optional (somthing to execute after the allocation and before scheduling the copy for the bunch of copys, $8 = optional (to execute after copying)
-	_DEF_CU_MALLOC_HTDC(`f_d´, `float´, `_DEF_NUM_F_VALS´,, `f_h´, `stream´)
-	_DEF_CU_MALLOC_HTDC(`y_k_d´, `float´, `_DEF_SIZE_Y´,, `y_k_h´, `stream´)
-	_DEF_CU_MALLOC_HTDC(`helper_struct_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `_DEF_CU_MALLOC(`helper_Struct_h´, `store_f_X_T_1_informations´, 1, `h´)
+	@define(`@DEF_CU_MALLOC°´, `$2* $1 = NULL;
+	cudaMalloc´@ifelse(`h´, `$4´, `Host´)`((void**) &$1, sizeof($2) * $3);´) @dnl° $1 = [device] pointer name, $2 = [device] pointer type (without the '*'), $3 = number of elements to allocate[, $4 = h (to allocate host space)
+	@define(`@DEF_CU_MALLOC_HTDC°´, `@DEF_CU_MALLOC($@)@ifelse(`´, `$7´,,`
+$7´)@divert(1)
+	cudaMemcpyAsync($1, $5, sizeof($2) * $3, cudaMemcpyHostToDevice, $6);@divert(0)´@ifelse(`´, `$8´,,`@divert(2)
+$8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (without the '*'), $3 = number of elements to allocate, $4 = '' (just jump with a double ','), $5 = host pointer name, $6 = stream, $7 = optional (somthing to execute after the allocation and before scheduling the copy for the bunch of copys, $8 = optional (to execute after copying)
+	@DEF_CU_MALLOC_HTDC(`f_d´, `float´, `@DEF_NUM_F_VALS°´,, `f_h´, `stream´)
+	@DEF_CU_MALLOC_HTDC(`y_k_d´, `float´, `@DEF_SIZE_Y°´,, `y_k_h´, `stream´)
+	@DEF_CU_MALLOC_HTDC(`helper_struct_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `@DEF_CU_MALLOC(`helper_Struct_h´, `store_f_X_T_1_informations´, 1, `h´)
 	helper_struct_h->alpha = 0.5;
 	helper_struct_h->beta = 0.5;´)
-	_DEF_CU_MALLOC(`helper_struct_h->vec_f_o´, `float´, `_DEF_NUM_F_VALS´)
-	_DEF_CU_MALLOC(`helper_struct_h->vec_nabla_f_o´, `float´, `_DEF_NUM_F_VALS´)
-	_DEF_CU_MALLOC(`x_p_d´, `_DEF_FFT_PRECISION(`C´)´, m4_eval(`_DEF_FFT_SIZE * (_DEF_FFT_SIZE / 2 + 1) * _DEF_NUM_PATCHES´))
-	_DEF_CU_MALLOC_HTDC(`v_3_d´, `float´, `_DEF_SIZE_Y´,,`x_h´, `stream´,,`cufftExecR2C(plan_x_p_F, x_d, x_p_d);
-	setFloatDeviceZero(v_3_d, `_DEF_SIZE_Y´, 128, stream);´)
-	_DEF_CU_MALLOC(`y_d´, `float´, `_DEF_SIZE_Y´)
-	_DEF_CU_MALLOC(`v_tmp_cmplx_d´, `_DEF_FFT_PRECISION(`C´)´, m4_eval(`_DEF_FFT_SIZE * (_DEF_FFT_SIZE / 2 + 1) * _DEF_NUM_PATCHES´))
-	_DEF_CU_MALLOC(`f_n_d´, `float´, 1)
-	_DEF_CU_MALLOC(`count_d´, `unsigned int´, 1)
-	_DEF_CU_MALLOC(`f_n_part_sums_d´, `float´, _CALL_ROUND_BLOCK_SIZE_UP(_DEF_SYZE_Y, 1024))
-	_DEF_CU_MALLOC(`(helper_struct_h->abs_vec_nabla_f_part_sums)´, `float´, _DEF_NUM_F_VALS)
-	_DEF_CU_MALLOC(`(helper_struct_h->abs_vec_delta_f_part_sums)´, `float´, _DEF_NUM_F_VALS)
-	_DEF_NUM_MALLOC(`(helper_Struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d)´, `float´, _DEF_NUM_F_VALS)
-	m4_dnl TODO: care and decide about helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums
-
+	@DEF_CU_MALLOC(`helper_struct_h->vec_f_o´, `float´, `@DEF_NUM_F_VALS°´)
+	@DEF_CU_MALLOC(`helper_struct_h->vec_nabla_f_o´, `float´, `@DEF_NUM_F_VALS°´)
+	@DEF_CU_MALLOC(`x_p_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°´))
+	@DEF_CU_MALLOC_HTDC(`v_3_d´, `float´, `@DEF_SIZE_Y°´,,`x_h´, `stream´,,`cufftExecR2C(plan_x_p_F, x_d, x_p_d);
+	setFloatDeviceZero(v_3_d, `@DEF_SIZE_Y°´, 128, stream);´)
+	@DEF_CU_MALLOC(`y_d´, `float´, `@DEF_SIZE_Y°´)
+	@DEF_CU_MALLOC(`v_tmp_cmplx_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°´))
+	@DEF_CU_MALLOC(`f_n_d´, `float´, 1)
+	@DEF_CU_MALLOC(`count_d´, `unsigned int´, 1)
+	@DEF_CU_MALLOC(`f_n_part_sums_d´, `float´, @CALL_ROUND_BLOCK_SIZE_UP(@DEF_SYZE_Y°, 1024))
+	@DEF_CU_MALLOC(`(helper_struct_h->abs_vec_nabla_f_part_sums)´, `float´, @DEF_NUM_F_VALS°)
+	@DEF_CU_MALLOC(`(helper_struct_h->abs_vec_delta_f_part_sums)´, `float´, @DEF_NUM_F_VALS°)
+	@DEF_NUM_MALLOC(`(helper_Struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d)´, `float´, @DEF_NUM_F_VALS°)
+	@DEF_CU_MALLOC(`(helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums)´, `float´, 32768)' @dnl° TODO: care and decide about helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums size '32768'
+	streamCAllback->finished = false;
+	streamCallback->helper_struct_d = helper_Struct_D;
+	streamCallback->helper_Struct_h = helper_Struct_h;
+	streamCallback->f_n_h = f_n_h;
+	@dnl° TODO: check for memset to f_n_d (if it is necessary)
+	@define(`@nargs´, `$#´) @dnl° just emit the number of arguments given. Usefull to determine the size of a grouped argument.
+	@define(`@_echo_q´, `$@´) @dnl° just a macro to ecpand into all the args, qouted. Usefull to expand a grouped argument.
+	@define(`@_CB_PLAN_STMT´, `@_CB_PLAN_STMT1(`$4´, `$2´, `$3´, __echo_q$1)´)
+	@define(`@_CB_PLAN_STMT1´, `cufftXtSetCallback(plan_$2, ((void**) &_h_´`@ifelse(`´, `$4´, `@ifelse(`l´, `$1´, `load_´, `s´, `$1´, `store_´)$2´, $4)), CUFFT_CB_´`@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), @ifelse(`´, `$5´, `NULL´, `((void**) &$5_d)´));´`@ifelse(`5´, `$#´, `´, `
+		cufftXtSetCallbackSharedSize(plan_$2, CUFFT_CB_´`@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), $6);´)
+		@dnl° TODO: insert the shared memory reservation call (with semicolon), as well as the following at the end: ´)´) m4_dnl <insert documentation here>
+	@define(`@DEF_CUFFT_HANDLE°´, `cufftHandle plan_$1;
+	{
+		cufftCreate(&$1);
+		int inembed[] = { 1, @ifelse(`C´, `$2´, @eval(`@DEF_FFT_SIZE° / 2 + 1´), @DEF_concatVarSize°) };
+		int onembed[] = { 1, @ifelse(`C´, `$2´, @DEF_concatVarSize°, @eval(`@DEF_FFT_SIZUE° / 2 + 1´)) };
+		int n[] = { @DEF_FFT_SIZE°, @DEF_FFT_SIZE° };
+		cufftPlanMany(&$1, 2, n, inembed, 1, @ifelse(`C´, `$2´, `@eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1)´)´, `R´, `$2´, `@eval(`@DEF_concatVarSize° ** 2´)´), onembed, 1, @ifelse(`C´, `$2´, `@eval(`@DEF_concatVarSize° ** 2´), CUFFT_C2R´, `R´, `$2´, `@eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1)´), CUFFT_R2C´), @DEF_NUM_PATCHES°);
+		cufftSetStream($1, $3);
+		@ifelse(_nargs$4, `1´, `´, `@_CB_PLAN_STMT($4, `$1´, `$2´, `l´)´)
+		@ifelse(_nargs$5, `1´, `´, `@_CB_PLAN_STMT($5, `$1´, `$2´, `s´)´)
+	}
+	@dnl° $1 = name of the plan, without the leading plan_, $2 = 'C' if C2R; 'R' if R2C, $3 = name of the stream to execute in, $4 = ([[loadCallbackName <without the leading _h_, if omitted: _h_load_$1>], [callerInfo device pointer<without the trailing _d, if omitted: NULL>] <to omit: leave the parenthesis empty and omit the comma in between>]), \
+	@dnl° $5 = ([[storeCallbackName <without the leading _h_, if omitted: _h_store_$1>], [callerInfo device pointer <without the trailing _d, if omited: NULL>][, size to request for shared memory allocation <inclusive any sizeof(...) factors>]<to omit: leave the parenthesis empty and omit the comma in between>])
+	
+	
