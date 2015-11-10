@@ -24,6 +24,7 @@
 @define(`@DEF_F_SQRD°´, @eval(`@DEF_SIZE_F° ** 2´)) @dnl° the number of values in one f
 @define(`@DEF_NUM_F_VALS°´, @eval(`@DEF_NUM_PATCHES° * @DEF_F_SQRD°´)) @dnl° the total number of values of all f
 @define(`@DEF_SIZE_Y°´, @eval(`(@DEF_storedSizeX° / 2) ** 2 * (@DEF_NUM_PATCHES_X° + 1) * (@DEF_NUM_PATCHES_Y° + 1)´)) @dnl° the number of elements in an y-space
+
 __global__ void kernel_set_float_zero(float* data, int lastBlockMax) {
 	if (blockIdx.x != (gridDim.x - 1) || threadIdx.x < lastBlockMax)
 		data[blockIdx.x * blockDim.x + threadIdx.x] = 0.f;
@@ -179,7 +180,7 @@ __device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, @
 __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`C´) element, void* __restict__ callerInfo, void* __retrict__ sharedPointer) {
 	((@DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((@DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
 }
-@define(`@DEF_STORE_REDUCE@CALL°´, `@ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)´)
+@define(`@DEF_STORE_REDUCE_CALL°´, `@ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)´)
 @define(`@DEF_STORE_REDUCE_DEF°´, `__device__ void @DEF_STORE_REDUCE@CALL(`$1$2´) (void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
 	struct store_f_X_T_1_informations (*inform_struct) =
 			(store_f_X_T_1_informations*) (callerInfo);
@@ -215,13 +216,13 @@ __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset,
 		vec_f_o[index] = f;
 }´)
 
-@DEF_STORE_REDUCE@DEF°(1, 2)
+@DEF_STORE_REDUCE_DEF°(1, 2)
 
-@DEF_STORE_REDUCE@DEF°(1, 1)
+@DEF_STORE_REDUCE_DEF°(1, 1)
 
-@DEF_STORE_REDUCE@DEF°(2, 1)
+@DEF_STORE_REDUCE_DEF°(2, 1)
 
-@DEF_STORE_REDUCE@DEF°(2, 2)
+@DEF_STORE_REDUCE_DEF°(2, 2)
 
 @dnl° that have been all the function definitions for the device side, except the not refactored, but to be coded, device side reduction/summation code for those reductions previously done in host code (to seriously reduce host<->device traffic
 @define(`_COMPOUND´, @ifelse(`L´, $1, `load´, `S´, `$1´, `store´)`_$3´)
@@ -232,7 +233,7 @@ __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset,
 
 void getCallbacks() {
 	@undivert(1)}
-define(`@CALL_ROUND_BLOCK_SIZE_UP´, `((($1) % ($2) ? ($1) / ($2) : ($1) / ($2) + 1))´)
+@define(`@CALL_ROUND_BLOCK_SIZE_UP´, `((($1) % ($2) ? ($1) / ($2) : ($1) / ($2) + 1))´)
 int setFloatDeviceZero(float* data, size_t count, int blocksize, cudaStream_t stream) {
 	kernel_set_float_zero<<<@CALL_ROUND_BLOCK_SIZE_UP(`count´, `blocksize´), blocksize, 0, stream>>>(data, count % blocksize);
 	return 0;
@@ -272,21 +273,23 @@ void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restric
 
 int optimizeF(float* f_h, float* x_h, cudaStream_t stream) {
 	int dev;
+	@define(`@_free_stack°´, `@ifdef(`@_free_stack1°´, `@_free_stack1°@popdef(`@_free_stack_1´)@_free_stack°´)´)
 	@define(`@DEF_CU_MALLOC°´, `$2* $1 = NULL;
-	cudaMalloc´@ifelse(`h´, `$4´, `Host´)`((void**) &$1, sizeof($2) * $3);´) @dnl° $1 = [device] pointer name, $2 = [device] pointer type (without the '*'), $3 = number of elements to allocate[, $4 = h (to allocate host space)
+	cudaMalloc´@ifelse(`h´, `$4´, `Host@pushdef(`@_free_stack1°´, `cudaFreeHost($1);
+´)´, `@pushdef(`@_free_stack1°´, `$1´)´)`((void**) &$1, sizeof($2) * $3);´) @dnl° $1 = [device] pointer name, $2 = [device] pointer type (without the '*'), $3 = number of elements to allocate[, $4 = h (to allocate host space)
 	@define(`@DEF_CU_MALLOC_HTDC°´, `@DEF_CU_MALLOC($@)@ifelse(`´, `$7´,,`
 $7´)@divert(1)
 	cudaMemcpyAsync($1, $5, sizeof($2) * $3, cudaMemcpyHostToDevice, $6);@divert(0)´@ifelse(`´, `$8´,,`@divert(2)
 $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (without the '*'), $3 = number of elements to allocate, $4 = '' (just jump with a double ','), $5 = host pointer name, $6 = stream, $7 = optional (somthing to execute after the allocation and before scheduling the copy for the bunch of copys, $8 = optional (to execute after copying)
 	@DEF_CU_MALLOC_HTDC(`f_d´, `float´, `@DEF_NUM_F_VALS°´,, `f_h´, `stream´)
 	@DEF_CU_MALLOC_HTDC(`y_k_d´, `float´, `@DEF_SIZE_Y°´,, `y_k_h´, `stream´)
-	@DEF_CU_MALLOC_HTDC(`helper_struct_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `@DEF_CU_MALLOC(`helper_Struct_h´, `store_f_X_T_1_informations´, 1, `h´)
+	@DEF_CU_MALLOC_HTDC(`helper_struct_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `@DEF_CU_MALLOC(`helper_struct_h´, `store_f_X_T_1_informations´, 1, `h´)
 	helper_struct_h->alpha = 0.5;
 	helper_struct_h->beta = 0.5;´)
 	@DEF_CU_MALLOC(`helper_struct_h->vec_f_o´, `float´, `@DEF_NUM_F_VALS°´)
 	@DEF_CU_MALLOC(`helper_struct_h->vec_nabla_f_o´, `float´, `@DEF_NUM_F_VALS°´)
 	@DEF_CU_MALLOC(`x_p_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°´))
-	@DEF_CU_MALLOC_HTDC(`v_3_d´, `float´, `@DEF_SIZE_Y°´,,`x_h´, `stream´,,`cufftExecR2C(plan_x_p_F, x_d, x_p_d);
+	@DEF_CU_MALLOC_HTDC(`v_3_d´, `float´, `@DEF_SIZE_Y°´,,`x_h´, `stream´,,`cufftExecR2C(plan_x_p_F, v_3_d, x_p_d);
 	setFloatDeviceZero(v_3_d, `@DEF_SIZE_Y°´, 128, stream);´)
 	@DEF_CU_MALLOC(`y_d´, `float´, `@DEF_SIZE_Y°´)
 	@DEF_CU_MALLOC(`v_tmp_cmplx_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°´))
@@ -297,7 +300,7 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@DEF_CU_MALLOC(`(helper_struct_h->abs_vec_delta_f_part_sums)´, `float´, @DEF_NUM_F_VALS°)
 	@DEF_NUM_MALLOC(`(helper_Struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d)´, `float´, @DEF_NUM_F_VALS°)
 	@DEF_CU_MALLOC(`(helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums)´, `float´, 32768)' @dnl° TODO: care and decide about helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums size '32768'
-	streamCAllback->finished = false;
+	streamCallback->finished = false;
 	streamCallback->helper_struct_d = helper_Struct_D;
 	streamCallback->helper_Struct_h = helper_Struct_h;
 	streamCallback->f_n_h = f_n_h;
@@ -305,8 +308,8 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@define(`@nargs´, `$#´) @dnl° just emit the number of arguments given. Usefull to determine the size of a grouped argument.
 	@define(`@_echo_q´, `$@´) @dnl° just a macro to ecpand into all the args, qouted. Usefull to expand a grouped argument.
 	@define(`@_CB_PLAN_STMT´, `@_CB_PLAN_STMT1(`$4´, `$2´, `$3´, __echo_q$1)´)
-	@define(`@_CB_PLAN_STMT1´, `cufftXtSetCallback(plan_$2, ((void**) &_h_´`@ifelse(`´, `$4´, `@ifelse(`l´, `$1´, `load_´, `s´, `$1´, `store_´)$2´, $4)), CUFFT_CB_´`@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), @ifelse(`´, `$5´, `NULL´, `((void**) &$5_d)´));´`@ifelse(`5´, `$#´, `´, `
-		cufftXtSetCallbackSharedSize(plan_$2, CUFFT_CB_´`@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), $6);´)
+	@define(`@_CB_PLAN_STMT1´, `cufftXtSetCallback(plan_$2, ((void**) &_h_@ifelse(`´, `$4´, `@ifelse(`l´, `$1´, `load_´, `s´, `$1´, `store_´)$2´, $4)), CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), @ifelse(`´, `$5´, `NULL´, `((void**) &$5_d)´));@ifelse(`5´, `$#´, `´, `
+		cufftXtSetCallbackSharedSize(plan_$2, CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), $6);´)´)
 		@dnl° TODO: insert the shared memory reservation call (with semicolon), as well as the following at the end: ´)´) m4_dnl <insert documentation here>
 	@define(`@DEF_CUFFT_HANDLE°´, `cufftHandle plan_$1;
 	{
@@ -321,7 +324,7 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	}´)
 	@dnl° $1 = name of the plan, without the leading plan_, $2 = 'C' if C2R; 'R' if R2C, $3 = name of the stream to execute in, $4 = ([[loadCallbackName <without the leading _h_, if omitted: _h_load_$1>], [callerInfo device pointer<without the trailing _d, if omitted: NULL>] <to omit: leave the parenthesis empty and omit the comma in between>]), \
 	@dnl° $5 = ([[storeCallbackName <without the leading _h_, if omitted: _h_store_$1>], [callerInfo device pointer <without the trailing _d, if omited: NULL>][, size to request for shared memory allocation <inclusive any sizeof(...) factors>]<to omit: leave the parenthesis empty and omit the comma in between>])
-
+	@undivert(1)
 	@DEF_CUFFT_HANDLE°(`x_p_F´, `R´, `stream´, (,), ())
 	@DEF_CUFFT_HANDLE°(`f_X_1_l_F´, `R´, `stream´, (,), (`f_X_fft_m_x_F´, `x_p´))
 	@DEF_CUFFT_HANDLE°(`f_X_1_s_F´, `C´, `stream´, (), (`f_X_y_p_v_1_F´,))
@@ -330,4 +333,53 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@DEF_CUFFT_HANDLE°(`f_X_T_1_nabla_tilde_F_uneven_b_F´, `C´, `stream´, (), (, `helper_struct´, `sizeof(float) * 32´))
 	@DEF_CUFFT_HANDLE°(`f__X_T_2_delta_tilde_f_even_b_F´, `C´, `stream´, (), (, `helper_struct´, `sizeof(float) * 32´))
 	@DEF_CUFFT_HANDLE°(`f_X_T_2_delta_tilde_f_uneven_b_F´, `C´, (), (, `helper_struct´, `sizeof(float) * 32´))
-
+	@undivert(2)
+	do {
+		for (int b=0; b < @DEF_m°; b++) {
+			cufftExecR2C(plan_f_X_1_l_F, f_d, v_tmp_cmplx_d);
+			setFloatDeviceZero(y_d, @DEF_SIZE_Y°, 128, stream);
+			cufftExecC2R(plan_f_X_1_s_F, v_tmp_cmplx_d, y_d);
+			kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_bracketc_sqr<<<@CALL_ROUND_BLK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(v_3_d, y_d, y_k_d, f_n_part_sums_d, f_n_d, count_d);
+			cufftExecR2C(plan_f_X_T_l_F, v_3_d, v_tmp_cmplx_d);
+			if(b % 2 == 0)
+				cufftExecC2R(plan_f_X_T_1_nabla_tilde_f_even_b_F, v_tmp_cmplx_d, v_3_d);
+			else
+				cufftExecC2R(plan_f_X_T_1_nabla_tilde_f_uneven_b_F, v_tmp_cmplx_d, v_3_d);
+			cufftExecR2C(plan_f_X_1_l_F, helper_struct_h->vec_nabla_f_o, v_tmp_cmplx_d);
+			setFloatDeviceZero(y_d, @DEF_SIZE_Y°, 128, stream);
+			cufftExecC2R(plan_f_X_1_s_F, v_tmp_cmplx_d, v_3_d);
+			cufftExecR2C(plan_f_X_T_l_F, v_3_d, v_tmp_cmplx_d);
+			if(b % 2 == 0)
+				cufftExecC2R(plan_f_X_T_2_delta_tilde_f_even_b_F, v_tmp_cmplx_d, v_3_d);
+			else
+				cufftExecC2R(plan_f_X_T_2_delta_tilde_f_uneven_b_F, v_tmp_cmplx_d, v_3_d);
+			cudaMemcpyAsync((void*) helper_struct_h, (void*) helper_struct_d, sizeof(store_f_X_T_1_informations), cudaMemcpyDeviceToHost, stream);
+			if (b == 0) {
+				cudaStreamSynchronize(stream); @dnl° TODO: convert from current runtime-based allocation mechanism to precalculated one, thereby preventing the hangup happening here.
+				@DEF_CU_MALLOC(`delta_nabla_f_part_sums_h´, `float´, `helper_struct_h->block_num´, `h´) @dnl° TODO: further research the reason of using an additional '0' as the last argument to this call
+				@DEF_CU_MALLOC(`part_sums_var_h´, `float´, `helper_struct_h->block_num´, `h´)
+				@DEF_CU_MALLOC(`(streamCallback->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h)´, `float´, `helper_struct_h->block_num´, `h´)
+				streamCallback->delta_nabla_f_part_sums_h = delta_nabla_f_part_sums_h;
+				streamCallback->part_sums_var_h = part_sums_var_h;
+			}
+			cudaMemcpyAsync((void*) delta_nabla_f_part_sums_h, (void*) helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			if (b % 2 == 0)
+				cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_nabla_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			else
+				cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			cudaMemcpyAsync((void*) f_n_h, (void*) f_n_d, sizeof(float), cudaMemcpyDeviceToHost, stream);
+			cudaMemcpyAsync((void*) streamCallback->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h, (void*) helper_struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			cudaStreamAddCallback(stream, (cudaStreamCallback_t) optimizeFcallback, (void*) streamCallback, 0);
+			if (b % 2 == 0) {
+				cudaStreamSynchronize(stream);
+				if (streamCallback->finished)
+					goto end_loop;
+			}
+			cudaMemcpyAsync(helper_struct_d, helper_struct_h, sizeof(store_f_X_T_1_informations), cudaMemcpyHostToDevice, stream);
+		}
+	} while (true); @dnl° TODO: check if while (true) is really the right thing to do here.
+	end_loop: cudaMemcpyAsync((void*) f_h, (void*) f_d, sizeof(float) * @DEF_NUM_F_VALS°, cudaMemcpyDeviceToHost, stream);
+	cudaStreamSynchronize(stream);
+	@_free_stack°
+	return 0;
+}
