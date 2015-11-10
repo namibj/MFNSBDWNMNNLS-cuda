@@ -318,8 +318,16 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 		cufftSetStream($1, $3);
 		@ifelse(_nargs$4, `1´, `´, `@_CB_PLAN_STMT($4, `$1´, `$2´, `l´)´)
 		@ifelse(_nargs$5, `1´, `´, `@_CB_PLAN_STMT($5, `$1´, `$2´, `s´)´)
-	}
+	}´)
 	@dnl° $1 = name of the plan, without the leading plan_, $2 = 'C' if C2R; 'R' if R2C, $3 = name of the stream to execute in, $4 = ([[loadCallbackName <without the leading _h_, if omitted: _h_load_$1>], [callerInfo device pointer<without the trailing _d, if omitted: NULL>] <to omit: leave the parenthesis empty and omit the comma in between>]), \
 	@dnl° $5 = ([[storeCallbackName <without the leading _h_, if omitted: _h_store_$1>], [callerInfo device pointer <without the trailing _d, if omited: NULL>][, size to request for shared memory allocation <inclusive any sizeof(...) factors>]<to omit: leave the parenthesis empty and omit the comma in between>])
-	
-	
+
+	@DEF_CUFFT_HANDLE°(`x_p_F´, `R´, `stream´, (,), ())
+	@DEF_CUFFT_HANDLE°(`f_X_1_l_F´, `R´, `stream´, (,), (`f_X_fft_m_x_F´, `x_p´))
+	@DEF_CUFFT_HANDLE°(`f_X_1_s_F´, `C´, `stream´, (), (`f_X_y_p_v_1_F´,))
+	@DEF_CUFFT_HANDLE°(`f_X_T_l_F´, `R´, `stream´, (`v_3_X_T_F´,), (`f_X_T_fft_m_x_F´, `x_p´))
+	@DEF_CUFFT_HANDLE°(`f_X_T_!_nabla_tilde_f_even_b_F´, `C´, `stream´, (), (, `helper_struct´, `sizeof(float) * 32´))
+	@DEF_CUFFT_HANDLE°(`f_X_T_1_nabla_tilde_F_uneven_b_F´, `C´, `stream´, (), (, `helper_struct´, `sizeof(float) * 32´))
+	@DEF_CUFFT_HANDLE°(`f__X_T_2_delta_tilde_f_even_b_F´, `C´, `stream´, (), (, `helper_struct´, `sizeof(float) * 32´))
+	@DEF_CUFFT_HANDLE°(`f_X_T_2_delta_tilde_f_uneven_b_F´, `C´, (), (, `helper_struct´, `sizeof(float) * 32´))
+
