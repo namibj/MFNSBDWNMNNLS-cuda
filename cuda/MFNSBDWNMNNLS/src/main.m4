@@ -8,6 +8,8 @@
 #include <cuda_runtime_api.h>
 #include <math.h>
 #include <driver_functions.h>
+#include <unistd.h>
+#include <sched.h>
 @define(`stop', `@dnl°')
 @changequote(`[', `]') stop ´´
 @changequote([`], [´]
@@ -271,9 +273,9 @@ void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restric
 	informations->f_o_h = informations->f_n_h;
 }
 
-int optimizeF(float* f_h, float* x_h, cudaStream_t stream) {
+int optimizeF(float* f_h, float* x_h, float* y_k_h, cudaStream_t stream) {
 	int dev;
-	@define(`@_free_stack°´, `@ifdef(`@_free_stack1°´, `@_free_stack1°@popdef(`@_free_stack_1´)@_free_stack°´)´)
+	@define(`@_free_stack°´, `@ifdef(`@_free_stack1°´, `@_free_stack1°@popdef(`@_free_stack_1°´)@_free_stack°´)´)
 	@define(`@DEF_CU_MALLOC°´, `$2* $1 = NULL;
 	cudaMalloc´@ifelse(`h´, `$4´, `Host@pushdef(`@_free_stack1°´, `cudaFreeHost($1);
 ´)´, `@pushdef(`@_free_stack1°´, `$1´)´)`((void**) &$1, sizeof($2) * $3);´) @dnl° $1 = [device] pointer name, $2 = [device] pointer type (without the '*'), $3 = number of elements to allocate[, $4 = h (to allocate host space)
@@ -355,7 +357,7 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 				cufftExecC2R(plan_f_X_T_2_delta_tilde_f_uneven_b_F, v_tmp_cmplx_d, v_3_d);
 			cudaMemcpyAsync((void*) helper_struct_h, (void*) helper_struct_d, sizeof(store_f_X_T_1_informations), cudaMemcpyDeviceToHost, stream);
 			if (b == 0) {
-				cudaStreamSynchronize(stream); @dnl° TODO: convert from current runtime-based allocation mechanism to precalculated one, thereby preventing the hangup happening here.
+				whille(cudaErrNotFinished == cudaStreamQuery(stream)) 				usleep(@DEF_SLEEP_TIME_POLL°); @dnl° TODO: convert from current runtime-based allocation mechanism to precalculated one, thereby preventing the hangup happening here.
 				@DEF_CU_MALLOC(`delta_nabla_f_part_sums_h´, `float´, `helper_struct_h->block_num´, `h´) @dnl° TODO: further research the reason of using an additional '0' as the last argument to this call
 				@DEF_CU_MALLOC(`part_sums_var_h´, `float´, `helper_struct_h->block_num´, `h´)
 				@DEF_CU_MALLOC(`(streamCallback->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h)´, `float´, `helper_struct_h->block_num´, `h´)
@@ -371,7 +373,8 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 			cudaMemcpyAsync((void*) streamCallback->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h, (void*) helper_struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
 			cudaStreamAddCallback(stream, (cudaStreamCallback_t) optimizeFcallback, (void*) streamCallback, 0);
 			if (b % 2 == 0) {
-				cudaStreamSynchronize(stream);
+				while(cudaErrNotFinished == cudaStreamQuery(stream))
+					usleep(@DEF_SLEEP_TIME_POLL°);
 				if (streamCallback->finished)
 					goto end_loop;
 			}
@@ -379,7 +382,56 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 		}
 	} while (true); @dnl° TODO: check if while (true) is really the right thing to do here.
 	end_loop: cudaMemcpyAsync((void*) f_h, (void*) f_d, sizeof(float) * @DEF_NUM_F_VALS°, cudaMemcpyDeviceToHost, stream);
-	cudaStreamSynchronize(stream);
+	while(cudaErrNotFinished == cudaStreamQuery(stream))
+		usleep(@DEF_SLEEP_TIME_POLL°);
 	@_free_stack°
 	return 0;
 }
+int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images); @dnl° TODO: implement this mehtod ;-)
+typedef struct optimizeF_helper_struct {
+	float* f_h;
+	float* y_k_h;
+	float* x_h
+void optimizeF_helper(void* datav) {
+	optimizeF_helper_struct_t data = (optimizeF_helper_struct_t*) datav;
+	cudaStream_t stream;
+	cudaStreamCreate(&stream);
+	optimizeF(data->f_h, data->y_k_h, data->x_h, stream);
+	while(cudaErrorNotReady == cudaStreamQuery(stream)) sched_yield();
+	cudaStreamDestroy(stream);
+	return;
+}
+int computeRecursive(float** f_h, float** y_k_h, float* x, int num_images){
+		pthread_t* threads;
+		threads = (pthread_t*) malloc(sizeof(pthread_t) * num_images);
+		if (num_images > 2) {
+			@DEF_CU_MALLOC(`x_h_1´, `float´, `@DEF_SIZE_Y°´, `h´)
+			@DEF_CU_MALLOC(`x_h_2´, `float´, `@DEF_SIZE_Y°´, `h´)
+			optimizeRecursive(f_h[0], y_k_h[0], x_h_1, num_images/2);
+			optimizeRecursive(f_h[num_images/2], y_k_h[num_images/2], x_h_2, num_images/2);
+			for(int i=0; i < num_images / 2;i++)
+				pthread_create(&(threads[i]), NULL, (void*) &optimizeF_helper, (void*) &(optimizeF_helper_struct_t){.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2});
+			for(int i=num_images/2; i < num_images; i++)
+				pthread(_create(&(threads[i]), NULL, (void*) &optimizeF_helper, (void*) &(optimizeF_helper_struct_t){.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1});
+			for(int i=0; i < num_images; i++)
+				pthread_join(threads[i], NULL);
+			@_free_stack°
+		} else {
+			x_h_1 = y_k_h[1];
+			x_h_2 = y_k_h[0];
+			for(int i=0; i < num_images / 2;i++)
+				pthread_create(&(threads[i]), NULL, (void*) &optimizeF_helper, (void*) &(optimizeF_helper_struct_t){.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2});
+			for(int i=num_images/2; i < num_images; i++)
+				pthread(_create(&(threads[i]), NULL, (void*) &optimizeF_helper, (void*) &(optimizeF_helper_struct_t){.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1});
+			for(int i=0; i < num_images; i++)
+				pthread_join(threads[i], NULL);
+		}
+		optimizeX(f_h, x, y_k_h, num_images);
+		free(threads);
+	}
+int main(void) {
+	float* f_h[@DEF_NUM_IMGS°];
+	float* y_k_h[@DEF_NUM_IMGS°];
+	float* x;
+	@dnl° TODO: implement the allocation of y_k_h...
+	computeRecursive(f_h, y_k_h, x, @DEF_NUM_IMGS°);
