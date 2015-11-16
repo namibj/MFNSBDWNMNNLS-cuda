@@ -387,7 +387,81 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@_free_stack°
 	return 0;
 }
-int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images); @dnl° TODO: implement this mehtod ;-)
+int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
+	@dnl° TODO: make sure to not overuse memory space and memory access in the implementation
+	@dnl° TODO: maybe eventually make this use host memory where applicable 
+
+	{ // precompute F_{k,i,j} and F^T_{k,i,j}
+		// f_p_k{_i,j} := 2Dfft(gewichtung(zuSchnipselGröße(f_k{_i,j})))
+		// => F_{k,k,j}
+
+		// f_t_p_k{_i,j} := conj(2Dfft(zuSchnipselGröße(f_k{_i,j})))
+		// => F^T_{k,i,j}
+	}
+	do {
+		for (int b = 0; b < @DEF_m°; b++) {
+			// v_4 = 0
+			// X''{_i,j} = 2Dfft(X{_i,j})
+
+			for (int k = 0; k < num_images; k++) {
+
+				// y_k{i,j} = y_k{_i,j} + 2Difft(X''{_i,j} * F_k{_i,j})
+				// => F_k
+
+				// v_3 = clip^X_y(y_k)
+				// v_3 = v_3 - y'_k
+
+				// v_4{_i,j} = v_4{_i,j} + .5 * gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
+				// => F^T_k
+
+			}
+			// nabla_f = v_4
+
+			// nabla_tilde_f = nabla_F * { nabla_F > 0 && x == 0}
+			// => active set classification
+
+			// v_4 = 0
+
+			// nabla_tilde_f'{_i,j} = 2Dfft(nabla_tilde_f{_i,j})
+
+			for (int k = 0; k < num_images; k++) {
+
+				// v_3{_i,j} = v_3{_i,j} + 2Difft(nabla_tilde_f'{_i,j} * f_p{_i,j})
+				// => F_k
+
+				// v_3 = clip^X_y(v_3)
+
+				// v_4{_i,j} = v_4{_i,j} + gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
+				// => F^T_k
+
+			}
+			// delta_f_tilde{_i,j} = v_4
+
+			// X = X - \beta * \alpha * nalba_f_tilde
+			// => Update
+
+			// delta_nabla_f_tilde = scalar_prod(nabla_f_tilde, delta_f_tilde)
+
+			if (b % 2 == 0) {
+				// n_a = |nabla_f_tilde|^2
+				if (n_a <= n_s)
+					// return X;
+				else
+					// a = n_a / delta_nabla_f_tilde
+			} else
+				// a = delta_nabla_f_tilde / |delta_f_tilde|^2
+
+			// f_n = sum^{num_images}_{k=0}(|y_k - y_k'|^2)
+			if (f_o - f_n <= \sigma * scalar_prod(nabla_f_o, (x_o -X)) ) {
+				// \beta = \eta * \beta
+			}
+
+			// f_o = f_n
+			// nabla_f_o = nabla_tilde_f
+			// x_o = X
+		}
+	}
+}
 typedef struct optimizeF_helper_struct {
 	float* f_h;
 	float* y_k_h;
@@ -434,4 +508,5 @@ int main(void) {
 	float* y_k_h[@DEF_NUM_IMGS°];
 	float* x;
 	@dnl° TODO: implement the allocation of y_k_h...
+	@dnl° TODO: eventually switch to texture-based reading of the integer-based input images to conserve memory and enable bigger optimizeX inputs (num_images) to speed it up (also check if the host-memory access speed/PCIe transfer speed is the bottleneck for large optimizeX inputs (num_images)
 	computeRecursive(f_h, y_k_h, x, @DEF_NUM_IMGS°);
