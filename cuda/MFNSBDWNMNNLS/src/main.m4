@@ -357,7 +357,8 @@ $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 				cufftExecC2R(plan_f_X_T_2_delta_tilde_f_uneven_b_F, v_tmp_cmplx_d, v_3_d);
 			cudaMemcpyAsync((void*) helper_struct_h, (void*) helper_struct_d, sizeof(store_f_X_T_1_informations), cudaMemcpyDeviceToHost, stream);
 			if (b == 0) {
-				whille(cudaErrNotFinished == cudaStreamQuery(stream)) 				usleep(@DEF_SLEEP_TIME_POLL°); @dnl° TODO: convert from current runtime-based allocation mechanism to precalculated one, thereby preventing the hangup happening here.
+				while(cudaErrNotFinished == cudaStreamQuery(stream))
+					usleep(@DEF_SLEEP_TIME_POLL°); @dnl° TODO: convert from current runtime-based allocation mechanism to precalculated one, thereby preventing the hangup happening here.
 				@DEF_CU_MALLOC(`delta_nabla_f_part_sums_h´, `float´, `helper_struct_h->block_num´, `h´) @dnl° TODO: further research the reason of using an additional '0' as the last argument to this call
 				@DEF_CU_MALLOC(`part_sums_var_h´, `float´, `helper_struct_h->block_num´, `h´)
 				@DEF_CU_MALLOC(`(streamCallback->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h)´, `float´, `helper_struct_h->block_num´, `h´)
