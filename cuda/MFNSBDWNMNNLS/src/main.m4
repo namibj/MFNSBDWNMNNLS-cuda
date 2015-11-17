@@ -183,7 +183,7 @@ __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset,
 	((@DEF_FFT_PECISION(`C´)*) (dataOut))[offset] = cuCmulf(((@DEF_FFT_PRECISION(`C´)*) (dataOut))[offset], cuConjf(((DEF_FFT_PREISION(`C´)*) (callerInfo))[offset]));
 }
 @define(`@DEF_STORE_REDUCE_CALL°´, `@ifelse(`11´, `$1´, `store_f_X_T_1_nabla_tilde_f_uneven_b_F´, `12´, `$1´, `store_f_X_T_1_nabla_tilde_f_even_b_F´, `21´, `$1´, `store_f_X_T_2_delta_tilde_f_even_b_F´, `22´, `$1´, `store_f_X_T_2_delta_tilde_f_uneven_b_F´)´)
-@define(`@DEF_STORE_REDUCE_DEF°´, `__device__ void @DEF_STORE_REDUCE@CALL(`$1$2´) (void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+@define(`@DEF_STORE_REDUCE_DEF°´, `__device__ void @DEF_STORE_REDUCE_CALL(`$1$2´) (void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
 	struct store_f_X_T_1_informations (*inform_struct) =
 			(store_f_X_T_1_informations*) (callerInfo);
 	float nabla_tilde_f = 0;
