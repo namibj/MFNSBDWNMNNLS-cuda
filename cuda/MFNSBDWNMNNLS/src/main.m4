@@ -387,6 +387,26 @@ $8´`@divert(0)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@_free_stack°
 	return 0;
 }
+@dnl° __device__ @DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
+@dnl°	@CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
+@dnl°	return @CALL_GEWICHTUNG(`xPos´, `yPos´) * ((@DEF_FFT_PRECISION(`R´)*) dataIn)[(@DEF_SIZE_F° * @DEF_SIZE_F°) * patchNum + SIZE_F * xPosStoed + yPosStored];
+@dnl°} @dnl° TODO: check why this is already done above. seems kinda strange, but it may be the first part of optimizeX() I did back then... also this is probably not the right call to @CALL_GEWICHTUNG(), as I did it differently above.
+
+
+__device__ @DEF_FFT_PRECISION(`R´) load_x_p_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrit__ sharedPtr) {
+	@DEF_FFT_PRECISION(`R´) ret;
+	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `ret = ((@DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];
+´) else
+		ret = 0;
+	return ret;
+}
+__device__ @DEF_FFT_PRECISION(`C´) load_x_p_cmplx_mul_f_p(void+ __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
+	((@DEF_FFT_PRECISION(`C´)*) (dataOut))[offset] = cuCmulf(((@DEF_FFT_PRECISION(`C´)*) (datOut))[offset], ((@DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);
+} @dnl° convert the parameters and rest from store to load.
+
+__device__ void store_y_plus_y_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
+}
 int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
 	@dnl° TODO: make sure to not overuse memory space and memory access in the implementation
 	@dnl° TODO: maybe eventually make this use host memory where applicable 
@@ -394,26 +414,30 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 	{ // precompute F_{k,i,j} and F^T_{k,i,j}
 		// f_p_k{_i,j} := 2Dfft(gewichtung(zuSchnipselGröße(f_k{_i,j})))
 		// => F_{k,k,j}
+		load_f_p_X() -> NULL
 
 		// f_t_p_k{_i,j} := conj(2Dfft(zuSchnipselGröße(f_k{_i,j})))
 		// => F^T_{k,i,j}
+		load_f_X_1_F() -> store_f_T_p_conj_fft_X()
 	}
 	do {
 		for (int b = 0; b < @DEF_m°; b++) {
 			// v_4 = 0
 			// X''{_i,j} = 2Dfft(X{_i,j})
+			load_x_p_X() -> NULL
 
-			for (int k = 0; k < num_images; k++) {
+			for (int k = 0; k < num_images; k++) { @dnl° TODO: use streams and/or pthreads for using the parallelism avaiable here.
 
 				// y_k{i,j} = y_k{_i,j} + 2Difft(X''{_i,j} * F_k{_i,j})
 				// => F_k
+				load_F_X_m_F_X() -> store_y_plus_y_X()
 
-				// v_3 = clip^X_y(y_k)
+				// v_3 = clip^X_y(y_k) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement.
 				// v_3 = v_3 - y'_k
-
+				kernel_v_3_gets_y_min...() @dnl° TODO: make sure this gets a new f_n{_i} and count{_i} for each input image
 				// v_4{_i,j} = v_4{_i,j} + .5 * gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
 				// => F^T_k
-
+				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() @dnl° *= .5; see: nabla_f_to_nabla_tilde_f_kernel_X
 			}
 			// nabla_f = v_4
 
@@ -424,41 +448,58 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 
 			// nabla_tilde_f'{_i,j} = 2Dfft(nabla_tilde_f{_i,j})
 
+			{ @dnl° TODO: this will be a single kernel. see: nabla_f_to_nabla_tilde_f_kernle_X
+				v_4 *= .5; @dnl° grabbed this to not do it in store_y_plus_y_X()
+				x_o = X;
+				nabla_tilde_f = v_4 > 0 && 0 == X ? 0 : v_4;
+				VX = x_o - \beta * \alpha * nabla_tilde_f;
+				scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc = scalar_prod(nabla_f_o, (x_o - X));
+				nabla_f_o = nabla_tilde_f;
+			}
+
+			v_4 = 0;
+			nabla_tilde_f' = fft(nabla_tilde_f);
+
 			for (int k = 0; k < num_images; k++) {
 
 				// v_3{_i,j} = v_3{_i,j} + 2Difft(nabla_tilde_f'{_i,j} * f_p{_i,j})
 				// => F_k
+				load_F_X_m_F_X() -> store_y_plus_y_X() @dnl° TODO: check if we need a different plan for this or if we can use the same one.
 
-				// v_3 = clip^X_y(v_3)
+				// v_3 = clip^X_y(v_3) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement.
 
 				// v_4{_i,j} = v_4{_i,j} + gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
 				// => F^T_k
+				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X()
 
 			}
 			// delta_f_tilde{_i,j} = v_4
 
-			// X = X - \beta * \alpha * nalba_f_tilde
+			// X = X - \beta * \alpha * nalba_f_tilde @dnl° DONE
 			// => Update
 
-			// delta_nabla_f_tilde = scalar_prod(nabla_f_tilde, delta_f_tilde)
+			{ @dnl° TODO: incorporate everything from here on into the new kernel "delta_nabla_f_tilde", so we can make use of the reduction for {scalar_prod(nabla_tilde_f, delta_tilde_f); Sum[f_n{_i}, {i, 0, num_images-1}], |nabla_tilde_f|^2, |delta_tilde_f|^2} and instantly use the result. In case of n_a <= n_s set a pointer (in mapped host memory?) and later use that to decide wether to continue optimizeing or not.
+				// delta_nabla_f_tilde = scalar_prod(nabla_f_tilde, delta_f_tilde)
+				delta_nabla_f_tilde = scalar_prod(nabla_tilde_f, delta_tilde_f);
 
-			if (b % 2 == 0) {
-				// n_a = |nabla_f_tilde|^2
-				if (n_a <= n_s)
-					// return X;
-				else
-					// a = n_a / delta_nabla_f_tilde
-			} else
-				// a = delta_nabla_f_tilde / |delta_f_tilde|^2
+				if (b % 2 == 0) {
+					// n_a = |nabla_f_tilde|^2
+					if (n_a <= n_s)
+						// return X;
+					else
+						// a = n_a / delta_nabla_f_tilde
+				} else
+					// a = delta_nabla_f_tilde / |delta_f_tilde|^2
 
-			// f_n = sum^{num_images}_{k=0}(|y_k - y_k'|^2)
-			if (f_o - f_n <= \sigma * scalar_prod(nabla_f_o, (x_o -X)) ) {
-				// \beta = \eta * \beta
+				// f_n = sum^{num_images}_{k=0}(|y_k - y_k'|^2)
+				if (f_o - f_n <= \sigma * scalar_prod(nabla_f_o, (x_o -X)) ) { @dnl° scalar_prod(nabla_f_o, (x_o -X)) see: nabla_f_to_nabla_tilde_f_kernel_X
+					// \beta = \eta * \beta
+				}
+
+				// f_o = f_n @dnl° see: delta_nabla_f_tilde_kernel_X
+				// nabla_f_o = nabla_tilde_f @dnl° see: delta_nabla_f_tilde_kernel_X
 			}
-
-			// f_o = f_n
-			// nabla_f_o = nabla_tilde_f
-			// x_o = X
+			// x_o = X @dnl° see: nabla_f_to_nabla_tilde_f_kernel_X
 		}
 	}
 }
