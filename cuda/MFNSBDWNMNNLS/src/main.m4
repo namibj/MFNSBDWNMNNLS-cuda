@@ -227,8 +227,8 @@ __device__ void store_f_X_T_fft_m_x_F(void* __restrict__ dataOut, size_t offset,
 @DEF_STORE_REDUCE_DEF°(2, 2)
 
 @dnl° that have been all the function definitions for the device side, except the not refactored, but to be coded, device side reduction/summation code for those reductions previously done in host code (to seriously reduce host<->device traffic
-@define(`_COMPOUND´, @ifelse(`L´, $1, `load´, `S´, `$1´, `store´)`_$3´)
-@define(`@CALL_ALLOC_CB´, `__device__ cufftCallback´@ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _d_´_COMPOUND($@)`cufftCallback´@ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _h_´_COMPOUND($@)`_$3;@divert(1)cudaMemcpyFromSymbol(&_h_´_COMPOUND($@)`, _d_´_COMPOUND($@)`, sizeof(_h_´_COMPOUND($@)`));
+@define(`@COMPOUND°´, @ifelse(`L´, $1, `load´, `S´, `$1´, `store´)`_$3´)
+@define(`@CALL_ALLOC_CB´, `__device__ cufftCallback´@ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _d_´@COMPOUND°($@)`cufftCallback´@ifelse(`L´, `$1´, `Load´, `S´, `$1´, `Store´)`$2 _h_´@COMPOUND°($@)`_$3;@divert(1)cudaMemcpyFromSymbol(&_h_´@COMPOUND°($@)`, _d_´@COMPOUND°($@)`, sizeof(_h_´@COMPOUND°($@)`));
 @divert(0)´) stop ´)´)
 
 @dnl° TODO: insert all the @CALL_ALLOC_CB
