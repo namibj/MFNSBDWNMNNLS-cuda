@@ -309,23 +309,26 @@ $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@dnl° TODO: check for memset to f_n_d (if it is necessary)
 	@define(`@nargs´, `$#´) @dnl° just emit the number of arguments given. Usefull to determine the size of a grouped argument.
 	@define(`@_echo_q´, `$@´) @dnl° just a macro to ecpand into all the args, qouted. Usefull to expand a grouped argument.
-	@define(`@_CB_PLAN_STMT´, `@_CB_PLAN_STMT1(`$4´, `$2´, `$3´, __echo_q$1)´)
-	@define(`@_CB_PLAN_STMT1´, `cufftXtSetCallback(plan_$2, ((void**) &_h_@ifelse(`´, `$4´, `@ifelse(`l´, `$1´, `load_´, `s´, `$1´, `store_´)$2´, $4)), CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), @ifelse(`´, `$5´, `NULL´, `((void**) &$5_d)´));@ifelse(`5´, `$#´, `´, `
-		cufftXtSetCallbackSharedSize(plan_$2, CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), $6);´)´)
+	@define(`@echo_1´, ``$1´´)
+	@define(`@echo_2´, ``$2´´)
+	@define(`@_CB_PLAN_STMT´, `@_CB_PLAN_STMT1(`$4´, `$2´, `$3´, (`$#´, `$5´), __echo_q$1)´)
+	@define(`@_CB_PLAN_STMT1´, `@ifelse(5, @echo_1$4, `for (int k = 0; k < @echo_2$4; k++) ´)cufftXtSetCallback(plan_$2@ifelse(5, @echo_1$4, `[k]´), ((void**) &_h_@ifelse(`´, `$5´, `@ifelse(`l´, `$1´, `load_´, `s´, `$1´, `store_´)$2´, $5)), CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), @ifelse(`´, `$6´, `NULL´, `((void**) &$6_d@ifelse(5, @echo_1$4, `[k]´))´));@ifelse(`6´, `$#´, `´, `
+		cufftXtSetCallbackSharedSize(plan_$2@ifelse(5, @echo_1$4, `[k]´), CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), $7);´)´)
 		@dnl° TODO: insert the shared memory reservation call (with semicolon), as well as the following at the end: ´)´) m4_dnl <insert documentation here>
-	@define(`@DEF_CUFFT_HANDLE°´, `cufftHandle plan_$1;
+	@define(`@DEF_CUFFT_HANDLE°´, `cufftHandle plan_$1@ifelse(6, `$#´, `[$6]´);
 	{
-		cufftCreate(&$1);
+		@ifelse(6, `$#´, `for(int k = 0; k < $6; k++) cufftCreate(&$1[k]);´, `cufftCreate(&$1);´)
 		int inembed[] = { 1, @ifelse(`C´, `$2´, @eval(`@DEF_FFT_SIZE° / 2 + 1´), @DEF_concatVarSize°) };
 		int onembed[] = { 1, @ifelse(`C´, `$2´, @DEF_concatVarSize°, @eval(`@DEF_FFT_SIZUE° / 2 + 1´)) };
 		int n[] = { @DEF_FFT_SIZE°, @DEF_FFT_SIZE° };
-		cufftPlanMany(&$1, 2, n, inembed, 1, @ifelse(`C´, `$2´, `@eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1)´)´, `R´, `$2´, `@eval(`@DEF_concatVarSize° ** 2´)´), onembed, 1, @ifelse(`C´, `$2´, `@eval(`@DEF_concatVarSize° ** 2´), CUFFT_C2R´, `R´, `$2´, `@eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1)´), CUFFT_R2C´), @DEF_NUM_PATCHES°);
-		cufftSetStream($1, $3);
-		@ifelse(_nargs$4, `1´, `´, `@_CB_PLAN_STMT($4, `$1´, `$2´, `l´)´)
-		@ifelse(_nargs$5, `1´, `´, `@_CB_PLAN_STMT($5, `$1´, `$2´, `s´)´)
+		@ifelse(6, `$#´, `for(int k = 0; k < $6; k++) ´)cufftPlanMany(@ifelse(6, `$#´, `&($1[k])´, `&$1´), 2, n, inembed, 1, @ifelse(`C´, `$2´, `@eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1)´)´, `R´, `$2´, `@eval(`@DEF_concatVarSize° ** 2´)´), onembed, 1, @ifelse(`C´, `$2´, `@eval(`@DEF_concatVarSize° ** 2´), CUFFT_C2R´, `R´, `$2´, `@eval(`@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1)´), CUFFT_R2C´), @DEF_NUM_PATCHES°);
+		@ifelse(6, `$#´, `for(int k = 0; k < $6; k++) cufftSetStream($1[k], $3[k]);´, `cufftSetStream($1, $3);´)
+		@ifelse(@nargs$4, `1´, `´, `@_CB_PLAN_STMT($4, `$1´, `$2´, `l´@ifelse(6, `$#´, `, `$6´´))´)
+		@ifelse(@nargs$5, `1´, `´, `@_CB_PLAN_STMT($5, `$1´, `$2´, `s´@ifelse(6, `$#´, `, `$6´´))´)
 	}´)
 	@dnl° $1 = name of the plan, without the leading plan_, $2 = 'C' if C2R; 'R' if R2C, $3 = name of the stream to execute in, $4 = ([[loadCallbackName <without the leading _h_, if omitted: _h_load_$1>], [callerInfo device pointer<without the trailing _d, if omitted: NULL>] <to omit: leave the parenthesis empty and omit the comma in between>]), \
 	@dnl° $5 = ([[storeCallbackName <without the leading _h_, if omitted: _h_store_$1>], [callerInfo device pointer <without the trailing _d, if omited: NULL>][, size to request for shared memory allocation <inclusive any sizeof(...) factors>]<to omit: leave the parenthesis empty and omit the comma in between>])
+	@dnl° [$6 = num_plan_clones_with_streams]
 	@undivert(1)
 	@DEF_CUFFT_HANDLE°(`x_p_F´, `R´, `stream´, (,), ())
 	@DEF_CUFFT_HANDLE°(`f_X_1_l_F´, `R´, `stream´, (,), (`f_X_fft_m_x_F´, `x_p´))
@@ -409,8 +412,8 @@ __device__ void store_y_plus_y_X(void* __restrict__ dataOut, size_t offset, @DEF
 	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
 }
 int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
-	@dnl° TODO: make sure to not overuse memory space and memory access in the implementation
 	@dnl° TODO: maybe eventually make this use host memory where applicable 
+
 	cudaEvent_t events[num_images];
 	cudaStream_t streams[num_images];
 	cudaEvent_t helperEvents[2];
