@@ -414,6 +414,12 @@ __device__ void store_y_plus_y_X(void* __restrict__ dataOut, size_t offset, @DEF
 int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
 	@dnl° TODO: maybe eventually make this use host memory where applicable 
 
+	@DEF_CUFFT_HANDLE(`f_p_X´, `R´, `streams´, (,), (), `num_images´)
+	@DEF_CUFFT_HANDLE(`f_p_X_T´, `R´, `streams´, (`f_X_1_F´,), (`f_T_p_conj_fft_X´,), `mum_images´)
+	@DEF_CUFFT_HANDLE(`x_p_X´, `R´, `streams[0]´, (,), ())
+	@DEF_CUFFT_HANDLE(`F_k_1´, `C´, `streams´, (`F_X_m_F_X´,), (`y_plus_y_X´,), `num_images´)
+	@DEF_CUFFT_HANDLE(`v_3_X_T_F´, `R´, `streams´, (,), (), `num_images´)
+	@DEF_CUFFT_HANDLE(`F_T_k_1´, `C´, (`F_X_m_F_X´,), (`store_x_plus_x_weights_X´,), `num_images´)
 	cudaEvent_t events[num_images];
 	cudaStream_t streams[num_images];
 	cudaEvent_t helperEvents[2];
@@ -428,11 +434,11 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 
 			// f_p_k{_i,j} := 2Dfft(gewichtung(zuSchnipselGröße(f_k{_i,j})))
 			// => F_{k,k,j}
-			load_f_p_X() -> NULL [stream k]
+			load_f_p_X() -> NULL [stream k] @dnl° DONE see: plan_f_p_X[k]
 
 			// f_t_p_k{_i,j} := conj(2Dfft(zuSchnipselGröße(f_k{_i,j})))
 			// => F^T_{k,i,j}
-			load_f_X_1_F() -> store_f_T_p_conj_fft_X() [stream k]
+			load_f_X_1_F() -> store_f_T_p_conj_fft_X() [stream k] @dnl° DONE see: plan_f_p_X_T[k]
 
 			cudaEventRecord(events[k], streams[k]);
 		}
@@ -444,7 +450,7 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 		for (int b = 0; b < @DEF_m°; b++) {
 			// v_4 = 0
 			// X''{_i,j} = 2Dfft(X{_i,j})
-			load_x_p_X() -> NULL [stream 0]
+			load_x_p_X() -> NULL [stream 0] @dnl° DONE see: plan_x_p_X
 
 			cudaEventRecord(helperEvents[0], streams[0]);
 			for (int k = 0; k < num_images; k++) { @dnl° TODO: use streams and/or pthreads for using the parallelism avaiable here.
@@ -453,14 +459,14 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 
 				// y_k{i,j} = y_k{_i,j} + 2Difft(X''{_i,j} * F_k{_i,j})
 				// => F_k
-				load_F_X_m_F_X() -> store_y_plus_y_X() [stream k]
+				load_F_X_m_F_X() -> store_y_plus_y_X() [stream k] @dnl° DONE see: plan_F_k_1
 
 				// v_3 = clip^X_y(y_k) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement.
 				// v_3 = v_3 - y'_k
 				kernel_v_3_gets_y_min...() @dnl° TODO: make sure this gets a new f_n{_i} and count{_i} for each input image
 				// v_4{_i,j} = v_4{_i,j} + .5 * gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
 				// => F^T_k
-				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() [stream k] @dnl° *= .5; see: nabla_f_to_nabla_tilde_f_kernel_X
+				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() [stream k] @dnl° *= .5; see: nabla_f_to_nabla_tilde_f_kernel_X @dnl° DONE: see plan_v_3_X_T_F @dnl° DONE see: plan_F_T_k_1
 
 				cudaEventRecord(events[k], streams[k]);
 			}
