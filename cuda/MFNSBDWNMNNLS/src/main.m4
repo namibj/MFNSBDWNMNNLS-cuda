@@ -416,10 +416,11 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 
 	@DEF_CUFFT_HANDLE(`f_p_X´, `R´, `streams´, (,), (), `num_images´)
 	@DEF_CUFFT_HANDLE(`f_p_X_T´, `R´, `streams´, (`f_X_1_F´,), (`f_T_p_conj_fft_X´,), `mum_images´)
-	@DEF_CUFFT_HANDLE(`x_p_X´, `R´, `streams[0]´, (,), ())
-	@DEF_CUFFT_HANDLE(`F_k_1´, `C´, `streams´, (`F_X_m_F_X´,), (`y_plus_y_X´,), `num_images´)
+	@DEF_CUFFT_HANDLE(`x_p_X´, `R´, `(streams[0])´, (,), ())
+	@DEF_CUFFT_HANDLE(`F_k´, `C´, `streams´, (`F_X_m_F_X´,), (`y_plus_y_X´,), `num_images´)
 	@DEF_CUFFT_HANDLE(`v_3_X_T_F´, `R´, `streams´, (,), (), `num_images´)
-	@DEF_CUFFT_HANDLE(`F_T_k_1´, `C´, (`F_X_m_F_X´,), (`store_x_plus_x_weights_X´,), `num_images´)
+	@DEF_CUFFT_HANDLE(`F_T_k´, `C´, `streams´, (`F_X_m_F_X´,), (`store_x_plus_x_weights_X´,), `num_images´)
+	@DEF_CUFFT_HANDLE(`nabla_tilde_f_p´, `R´, `(streams[0])´, (`x_p_F´,), ())
 	cudaEvent_t events[num_images];
 	cudaStream_t streams[num_images];
 	cudaEvent_t helperEvents[2];
@@ -459,14 +460,14 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 
 				// y_k{i,j} = y_k{_i,j} + 2Difft(X''{_i,j} * F_k{_i,j})
 				// => F_k
-				load_F_X_m_F_X() -> store_y_plus_y_X() [stream k] @dnl° DONE see: plan_F_k_1
+				load_F_X_m_F_X() -> store_y_plus_y_X() [stream k] @dnl° DONE see: plan_F_k
 
 				// v_3 = clip^X_y(y_k) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement.
 				// v_3 = v_3 - y'_k
 				kernel_v_3_gets_y_min...() @dnl° TODO: make sure this gets a new f_n{_i} and count{_i} for each input image
 				// v_4{_i,j} = v_4{_i,j} + .5 * gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
 				// => F^T_k
-				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() [stream k] @dnl° *= .5; see: nabla_f_to_nabla_tilde_f_kernel_X @dnl° DONE: see plan_v_3_X_T_F @dnl° DONE see: plan_F_T_k_1
+				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() [stream k] @dnl° *= .5; see: nabla_f_to_nabla_tilde_f_kernel_X @dnl° DONE: see plan_v_3_X_T_F @dnl° DONE see: plan_F_T_k
 
 				cudaEventRecord(events[k], streams[k]);
 			}
@@ -498,7 +499,7 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 			v_4 = 0; [stream 1]
 			cudaEventRecord(helperEvents[1], streams[1]);
 
-			nabla_tilde_f' = fft(nabla_tilde_f); [stream 0]
+			nabla_tilde_f' = fft(nabla_tilde_f); [stream 0] @dnl° DONE see: plan_nabla_tilde_f_p
 			cudaEventRecord(helperEvents[0], streams[0]);
 
 			for (int k = 0; k < num_images; k++) {
@@ -506,14 +507,14 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 				cudaStreamWaitEvent(streams[k], helperEvents[0], 0);
 				// v_3{_i,j} = v_3{_i,j} + 2Difft(nabla_tilde_f'{_i,j} * f_p{_i,j})
 				// => F_k
-				load_F_X_m_F_X() -> store_y_plus_y_X() @dnl° TODO: check if we need a different plan for this or if we can use the same one.
+				load_F_X_m_F_X() -> store_y_plus_y_X() @dnl° DONE see: plan_F_k
 
-				// v_3 = clip^X_y(v_3) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement.
+				// v_3 = clip^X_y(v_3) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement. @dnl° TODO: check this out. Create an Issue for it.
 
 				cudaStreamWaitEvent(streams[k], helperEvents[1], 0);
 				// v_4{_i,j} = v_4{_i,j} + gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
 				// => F^T_k
-				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X()
+				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() @dnl° DONE see: plan_v_3_X_T_F @dnl° DONE see: plan_F_T_k
 
 				cudaEventRecord(events[k], streams[k]);
 
