@@ -100,29 +100,29 @@ __device__ @DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t
 		yPosStored = yPos + @DEF_SIZE_HALF_F° - @DEF_FFT_SIZE°;
 	} else {
 		$2
-	}´, `X´, `$1´, `int zero_space[4]; @dnl° 0 <= x < 1 && 2 <= y < 3
+	}´, `int zero_space[4]; @dnl° 0 <= x < 1 && 2 <= y < 3
 	int xPatch = patchNum / @DEF_NUM_PATCHES_Y°;
 	int yPatch = patchNum - xPatch * @DEF_NUM_PATCHES_Y°;
 	if(0 == xPatch) { @dnl° x = 0 border
-		zero_space[0] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2));
-		zero_space[1] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
+		zero_space[0] = @ifelse(`X´, `$1´, `@eval(@DEF_storedSizeX° / 2)´, `Y´, `$1´, `@eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2))´);
+		zero_space[1] = @ifelse(`s´, `$2´, `@DEF_FFT_SIZE°´, `l´, `$2´, `@eval(@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F°)´);
 	} else if (@DEF_NUM_PATCHES_Y° - 1 == xPatch) { @dnl° x = MAX border
-		zero_space[0] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
-		zero_space[1] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2));
+		zero_space[0] = @ifelse(`s´, `$2´, `0´, `l´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[1] = @ifelse(`s´, `$2´, `@DEF_FFT_SIZE°´, `l´, `$2´, `@eval(@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F°)´);
 	} else { @dnl°  no x border
-		zero_space[0] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
-		zero_space[1] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
+		zero_space[0] = @ifelse(`s´, `$2´, `0´, `l´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[1] = @ifelse(`X´, `$2´, `@eval(@DEF_FFT_SIZE°- (@DEF_storedSizeX° / 2))´, `Y´, `$2´, `@eval(@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX° / 2))´);
 	}
 
 	if (0 == yPatch) { @dnl° y = 0 border
-		zero_space[2] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° /2));
-		zero_space[3] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
+		zero_space[2] = @ifelse(`X´, `$1´, `@eval(@DEF_storedSizeX° / 2)´, `Y´, `$1´, `@eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2))´);
+		zero_space[3] = @ifelse(`s´, `$2´, `@DEF_FFT_SIZE°´, `l´, `$2´, `@eval(@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F°)´);
 	} else if (@DEF_NUM_PATCHES_X° - 1 == yPatch) { @dnl° y = MAX border
-		zero_space[2] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
-		zero_space[3] = @eval(@DEF_SIZE_HALF_F° + (@DEF_storedSizeX° /2));
-	} else { @dnl° no y border
-		zero_space[2] = @ifelse(`Y´, `$2´, `0´, `X´, `$2´, `@DEF_SIZE_HALF_F°´);
-		zero_space[3] = @ifelse(`Y´, `$2´, `@DEF_FFT_SIZE°´, `X´, `$2´, `@eval(@DEF_SIZE_HALF_F° + @DEF_storedSizeX°)´);
+		zero_space[2] = @ifelse(`s´, `$2´, `0´, `l´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[3] = @ifelse(`s´, `$2´, `@DEF_FFT_SIZE°´, `l´, `$2´, `@eval(@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F°)´);
+	} else { @dnl° no  y border
+		zero_space[2] = @ifelse(`s´, `$2´, `0´, `l´, `$2´, `@DEF_SIZE_HALF_F°´);
+		zero_space[3] = @ifelse(`X´, `$2´, `@eval(@DEF_FFT_SIZE°- (@DEF_storedSizeX° / 2))´, `Y´, `$2´, `@eval(@DEF_FFT_SIZE° - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX° / 2))´);
 	}
 
 	int patcOffset = @DEF_xPatchOffset° * xPatch + @DEF_yPatchOffset° * yPatch;
@@ -141,13 +141,19 @@ __device__ @DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t
 @dnl° 		xPos,yPos = <position in the fft, zero-indexed>,
 @dnl° 		xPosStored,yPosStored = <position in memory, zero indexed>
 @dnl° 		patchNum = <patch number, zero indexed>
+@dnl° |$1 = 'Y',
+@dnl° 	uses:
+@dnl° 		$2 =
+@dnl° 			'l' <to use the padding for loading a 'Y'>
+@dnl° 			|'s' <to use the padding for saving a 'Y'>,
+@dnl° 		$3 = <statement(s) to execute in case it is a valid position>
 @dnl° |$1 = 'X',
 @dnl° 	uses:
 @dnl° 		$2 =
-@dnl° 			'X' <to set the valid range for xPos,yPos to [@DEF_SIZE_HALF_F°;@DEF_SIZE_HALF_F° + @DEF_storedSizeX°), except if it is a border patch, which will shrink it at this boarder to @DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2) (right-open boundarys translate this into: include the centric element of the fft, only exlude exactly (inlusively) @DEF_SIZE_HALF_F° pixels at the boarders)>
-@dnl° 			|'Y' <the same as if you would specify 'X', except it won't be capped in the non-boarder patch boundary's>,
+@dnl° 			'l' <to use the padding for loading a 'X'>
+@dnl° 			|'s' <to use the padding for saving a 'X'>,
 @dnl° 		$3 = <statement(s) to execute in case it is a valid position>
-	@CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
+@CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
 	return ((@DEF_FFT_PRECISION(`R´)*) dataIn)[(@DEF_SIZE_F° * @DEF_SIZE_F°) *  patchNum + @DEF_SIZE_F° * xPosStored + yPosStored] * @CALL_GEWICHTUNG(`xPos - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX°/2)´, `yPos - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX°/2)´);
 }
 
@@ -160,14 +166,14 @@ __device__ @DEF_FFT_PRECISION(`C´) load_F_X_m_F_X(void* __restrict__ dataIn, si
 }
 
 __device__ void store_v_4_F_T_v_4_p_weight_half_v_1_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `element *= .5f * @CALL_GEWICHTUNG(`xPosStored - (@DEF_storedSizeX° /2)´, `yPosStored - (@DEF_storedSizeX° /2)´);
+	@CALL_RESTRICT_WITH_PADDING(`Y´, `s´, `element *= .5f * @CALL_GEWICHTUNG(`xPosStored - (@DEF_storedSizeX° /2)´, `yPosStored - (@DEF_storedSizeX° /2)´);
 	atomicAdd(&((@DEF_FFT_PREISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element);
 ´)
 }
 
 __device__ @DEF_FFT_PRECISION(`R´) load_x_p_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrit__ sharedPtr) {
 	@DEF_FFT_PRECISION(`R´) ret;
-	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `ret = ((@DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];
+	@CALL_RESTRICT_WITH_PADDING(`X´, `l´, `ret = ((@DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];
 		ret *= @CALL_GEWICHTUNG(`xPosStored´, `yPosStored´);
 ´) else
 		ret = 0;
@@ -180,12 +186,12 @@ __device__ @DEF_FFT_PRECISION(`R´) load_f_X_1_F(void* __restrict__ dataIn, size
 }
 
 __device__ @DEF_FFT_PRECISION(`R´) load_v_3_X_T_F(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ sharedPtr) {
-	@CALL_RESTRICT_WITH_PADDING(`X´, `X´, `return ((@DEF_FFT_PRECISION(`R´)*) (daaIn))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];´) else
+	@CALL_RESTRICT_WITH_PADDING(`Y´, `l´, `return ((@DEF_FFT_PRECISION(`R´)*) (daaIn))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];´) else
 		return 0;
 }
 
 __device__ void store_f_X_y_p_v_1_F(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	@CALL_RESTRICT_WITH_PADDING(`X´, `X´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
+	@CALL_RESTRICT_WITH_PADDING(`Y´, `s´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
 }
 
 __device__ void store_f_X_fft_m_x_F(void+ __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`C´) element, void* __restrict__ callerInfo, void* __retrict__ sharedPointer) {
@@ -412,7 +418,7 @@ $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 
 __device__ @DEF_FFT_PRECISION(`R´) load_x_p_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrit__ sharedPtr) {
 	@DEF_FFT_PRECISION(`R´) ret;
-	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `ret = ((@DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];
+	@CALL_RESTRICT_WITH_PADDING(`X´, `l´, `ret = ((@DEF_FFT_PRECISION(`R´)*) dataIn)[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored];
 ´) else
 		ret = 0;
 	return ret;
@@ -422,10 +428,10 @@ __device__ @DEF_FFT_PRECISION(`C´) load_x_p_cmplx_mul_f_p(void+ __restrict__ da
 } @dnl° convert the parameters and rest from store to load.
 
 __device__ void store_y_plus_y_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
+	@CALL_RESTRICT_WITH_PADDING(`Y´, `s´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
 }
 __global__ void kernel_nabla_f_to_nabla_tilde_f_X(float* __restrict__ v_4, float* __restrict__ X, float* __restrict__ nabla_tilde_f, float* __restrict__ alpha_beta, float* __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc) {
-	@CALL_RESTRICT_WITH_PADDING(`X´, `X´, `x_o_val = X[index];
+	@CALL_RESTRICT_WITH_PADDING(`X´, `l´, `x_o_val = X[index];
 			v_4_val = v_4[index] * .5f;
 			nabla_f_o_val = nabla_tilde_f[index];
 			nabla_tilde_val = v_4_val > 0 && 0 == x_o_val ? 0 : v_4_val;
