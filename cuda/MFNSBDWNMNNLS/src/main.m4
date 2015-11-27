@@ -133,7 +133,20 @@ __device__ @DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t
 	}
 	@dnl° TODO: missing y and rest of it.
 	@dnl° TODO: complete for the zeroSpace[4] way in X and use $2, $3, etc. to select the right way, but only as many arguments as needed.
-	´)´)
+	´)´) @dnl° args:
+@dnl° $1 = 'F',
+@dnl° 	uses:
+@dnl° 		$2 = <statement('s) to execute in case this spot requires padding, it will be evaluated once in the x-coordinate checking, and once for the y-coordinate checking, in case it happens to be out of bounds in both.>
+@dnl° 	sets (among others):
+@dnl° 		xPos,yPos = <position in the fft, zero-indexed>,
+@dnl° 		xPosStored,yPosStored = <position in memory, zero indexed>
+@dnl° 		patchNum = <patch number, zero indexed>
+@dnl° |$1 = 'X',
+@dnl° 	uses:
+@dnl° 		$2 =
+@dnl° 			'X' <to set the valid range for xPos,yPos to [@DEF_SIZE_HALF_F°;@DEF_SIZE_HALF_F° + @DEF_storedSizeX°), except if it is a border patch, which will shrink it at this boarder to @DEF_SIZE_HALF_F° + (@DEF_storedSizeX° / 2) (right-open boundarys translate this into: include the centric element of the fft, only exlude exactly (inlusively) @DEF_SIZE_HALF_F° pixels at the boarders)>
+@dnl° 			|'Y' <the same as if you would specify 'X', except it won't be capped in the non-boarder patch boundary's>,
+@dnl° 		$3 = <statement(s) to execute in case it is a valid position>
 	@CALL_RESTRICT_WITH_PADDING(`F´, `return 0;´)
 	return ((@DEF_FFT_PRECISION(`R´)*) dataIn)[(@DEF_SIZE_F° * @DEF_SIZE_F°) *  patchNum + @DEF_SIZE_F° * xPosStored + yPosStored] * @CALL_GEWICHTUNG(`xPos - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX°/2)´, `yPos - @DEF_SIZE_HALF_F° - (@DEF_storedSizeX°/2)´);
 }
@@ -411,6 +424,18 @@ __device__ @DEF_FFT_PRECISION(`C´) load_x_p_cmplx_mul_f_p(void+ __restrict__ da
 __device__ void store_y_plus_y_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
 	@CALL_RESTRICT_WITH_PADDING(`X´, `Y´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
 }
+__global__ void kernel_nabla_f_to_nabla_tilde_f_X(float* __restrict__ v_4, float* __restrict__ X, float* __restrict__ nabla_tilde_f, float* __restrict__ alpha_beta, float* __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc) {
+	@CALL_RESTRICT_WITH_PADDING(`X´, `X´, `x_o_val = X[index];
+			v_4_val = v_4[index] * .5f;
+			nabla_f_o_val = nabla_tilde_f[index];
+			nabla_tilde_val = v_4_val > 0 && 0 == x_o_val ? 0 : v_4_val;
+			x_val = x_o_val - (*alpha_beta) * nabla_tilde_val;
+			sum_val = nabla_f_o_val * (x_o_val - x_val);
+			nabla_tilde_f[index] = nabla_tilde_val;
+			X[index] = x_val;´) 
+			
+
+scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__b
 int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
 	@dnl° TODO: maybe eventually make this use host memory where applicable 
 
