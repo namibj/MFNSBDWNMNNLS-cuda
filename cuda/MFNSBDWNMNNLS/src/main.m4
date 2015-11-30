@@ -11,8 +11,8 @@
 #include <unistd.h>
 #include <sched.h>
 @define(`stop', `@dnl°')
-@changequote(`[', `]') stop ´´
-@changequote([`], [´]
+@changequote(`[', `]') stop ´´)
+@changequote([`], [´])
 @dnl° define(`@CALL_APPEND´,`define(`@DEF_MYLIST°´,ifdef(`@DEF_MYLIST°´,`[changequote([,])@DEF_MYLIST°[,$1]changequote(`,´)]´,[$1]))´)
 @define(`@DEF_concatVarSize°´, eval(`1 ** 8´))
 @define(`@DEF_m°´, eval(`10 * 2´))@dnl° The non-monotonic NNLS solvers inner iteration count M, which has to be even.
@@ -21,7 +21,7 @@
 @define(`@DEF_BETA_F°´, `0.5´)@dnl° The non-monotonic NNLS solvers tweaking parameter β
 @define(`@DEF_SIGMA_F°´, `0.5´)@dnl° The non-monotonic NNLS solvers tweaking parameter σ
 @define(`@CALL_GEWICHTUNG´. `((1-abs(($1)- (0.5f * (@DEF_storedSizeX° - 1))+0.5f)*(2.f/(@DEF_storedSizeX°+1)))* (1-abs(($2)- (0.5f * (@DEF_storedSizeX° - 1))+0.5f)*(2.f/(@DEF_storedSizeX°+1))))´)@dnl° The trusty macro to calculate the correct wheigh for a given coordinate
-@define(`@DEF_BLOCk_TOO_HIGH_THREADS_XY°´, `if (blockIdx.x == gridDim.x -1 && threadIdx.x >= (((@DEF_PATCH_NUM_X° + 1) * @DEF_storedSizeX° / 2 @ifelse(`Y´, `$1´, `2 * @DEF_SIZE_HALF_F°´)) * ((@DEF_PATCH_NUM_Y° + 1) * @DEF_storedSizeX° / 2 @ifelse(`Y´, `$1´, `2 * @DEF_SIZE_HALF_F°´)) - (gridDim.x -1) * blockDim.x) -1)´) @dnl° This is only the opening if(), not the {} nor an else
+@define(`@DEF_BLOCK_TOO_HIGH_THREADS_XY°´, `if (blockIdx.x == gridDim.x -1 && threadIdx.x >= (@eval(((@DEF_PATCH_NUM_X° + 1) * @DEF_storedSizeX° / 2) * ((@DEF_PATCH_NUM_Y° + 1) * @DEF_storedSizeX° / 2) -1) -(gridDim.x -1) * blockDim.x))´)@dnl° This is only the opening if(), not the {} nor an else
 @define(`@DEF_NUM_PATCHES°´, @eval(`@DEF_NUM_PATCHES_X° * @DEF_NUM_PATCHES_Y°´) @dnl° just the total count of patches
 @define(`@DEF_F_SQRD°´, @eval(`@DEF_SIZE_F° ** 2´)) @dnl° the number of values in one f
 @define(`@DEF_NUM_F_VALS°´, @eval(`@DEF_NUM_PATCHES° * @DEF_F_SQRD°´)) @dnl° the total number of values of all f
@@ -33,29 +33,30 @@ __global__ void kernel_set_float_zero(float* data, int lastBlockMax) {
 
 }
 
-__global__ void  kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_bracketc_sqr(
-		float* __restrict__ v_3, float* __restrict__ y, float* __restrict__ y_k,
-		float* __restrict__ f_n_part_sums, float* __restrict__ f_n,
-		unsigned int* __restrict__ count) {
-	int index = blockIdx.x * blockDim.x + threadIdx.x;
-	float diff;
-	float value;
-	@DEF_BLOCK_TOO_HIGH_THREADS_XY(`Y´)
-		diff = 0;
-	else {
-		diff = y[index] - y_k[index];
-		v_3[index] = diff;
-	}
-	@define(`@CALL_BUTTERFLY_REDUCTION´,`{ for( int i = 16; i >= 1; i /= 2) $1 += __shfl_xor($1, i 32);}´) @dnl° Basic additive XOR butterfly reduction across current warp on the given argument
-	@define(`@CALL_BUTTERLFLY_BLOCK_REDUTCTION´, `{ //Reduction
+@define(`@CALL_BUTTERFLY_REDUCTION´,`{ for( int i = 16; i >= 1; i /= 2) $1 += __shfl_xor($1, i 32);}´) @dnl° Basic additive XOR butterfly reduction across current warp on the given argument
+@define(`@CALL_BUTTERLFLY_BLOCK_REDUTCTION´, `{ //Reduction
 		@CALL_BUTTERFLY_REDCTION($1)
 		if(threadIdx.x%32==0) @ifelse(`s´, `$3´, `((float*) sharedPointer)[threadIdx.x / 32]´, `part_Sums[threadIdx.x / 32´) = $1;
 		__syncthreads();
 		if(threadIdx.x/32 == 0) {
 			$1 = @ifelse(`s´, `$3´, `(threaIdx.x/32 > blockDim.x/32)? 0 : ((float*) sharedPointer)[threadIdx.x & 0x1f];´, `part_Sums[threadIdx.x & 0x1f];´)
 			@CALL_BUTTERFLY_REUCTION($1)
-			if (threadIdx.x%32) {$2}}´) @dnl° whole 1024 Threads (in x index only) reduction across the block on $1, eecuting $2 at the end in the first thread of the block.
-	@CALL_BUTTERFLY_BLOCK_REDUCTION(`diff´, `f_n_part_sums[blockIdx.x] = diff;
+			if (threadIdx.x%32) {$2}}´) @dnl° whole 1024 Threads (in x index only) reduction across the block on $1, executing $2 at the end in the first thread of the block.
+__global__ void  kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_bracketc_sqr(
+		float* __restrict__ v_3, float* __restrict__ y, float* __restrict__ y_k,
+		float* __restrict__ f_n_part_sums, float* __restrict__ f_n,
+		unsigned int* __restrict__ count) {
+	@define(`@DEF_conv_reduce´, `int index = blockIdx.x * blockDim.x + threadIdx.x;
+	float diff;
+	float value;
+	shared boolean isLastBlockDone;
+	shared float part_Sums[32];
+	@DEF_BLOCK_TOO_HIGH_THREADS_XY°
+		diff = 0;
+	else {
+		$1
+	}
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`diff´, `$2[blockIdx.x] = diff;
 		__threadfence();
 		unsigned int value = atomicInc(count, gridDim.x);
 		isLastBlockDone = (value == (gridDim.x - 1));´) @dnl° use that reduction!
@@ -64,28 +65,30 @@ __global__ void  kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_b
 		if (gridDim.x >  blockDim.x) {
 			value = 0;
 
-			for (int x=0; (gridDim.x % blokDim.x) == 0 ? x < (gridDim.x / blockDim.x) : x <= (gridDim.x / blockDim.x); x++)
-				value += (gridDim.x % blockDim.x) == 0 || threadIdx.x * blockDim.x < gridDim.x ? f_n_part_sums[threadIdx.x * blockDim.x] : 0;
+			for (int x=0; (gridDim.x % blockDim.x) == 0 ? x < (gridDim.x / blockDim.x) : x <= (gridDim.x / blockDim.x); x++)
+				value += (gridDim.x % blockDim.x) == 0 || threadIdx.x * blockDim.x < gridDim.x ? $2[threadIdx.x * blockDim.x] : 0;
 		}
-		@CALL_BUTTERFLY_BLOCK_REDUCION(value, `*f_n = value;
+		@CALL_BUTTERFLY_BLOCK_REDUCION(value, `*$3 = value;
 		*count = 0;´) @dnl° reduction across the partial sums
-	}
+	}´)
+	@DEF_conv_reduce(`diff = y[index] - y_k[index];
+		v_3[index] = diff;´, `f_p_part_sums´, `f_n´)
 }
 
 __global__ void kernel_nabla_tilde_Gets_nabla_capped_with_rule( float* __restrict__ vec_nabla_tide_f, float* __restrict__ vec_nabla_f, float* __restrict__ vec_X) {
-	@DEF_BLOCK_TOO_HIGH_THEADS_XY(`X´)
+	@DEF_BLOCK_TOO_HIGH_THREADS_XY°
 		return;
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 	vec_nabla_tilde_f[i] = (0 < vec_nabla_f[i] && 0 == vec_x[i]) ? 0 : vec_nabla_f[i];
 }
 
 __device__ @DEF_FFT_PRECISION(`R´) load_f_p_X(void* __restrict__ dataIn, size_t offset, void* __restrict__ callerInfo, void* __restrict__ shared_Ptr) {
-	@define(`@CALL_SPLIT_concatVar´, `int xPos = (offset / @DEF_concatVarSize°) & @DEF_SIZE_concatVarSize°;
+	@define(`@CALL_SPLIT_concatVar°´, `int xPos = (offset / @DEF_concatVarSize°) & @DEF_concatVarSize°;
 	int yPos = offset & @DEF_concatVarSize°;
-	int patchNum = offset / @DEF_cpncatVarSize° / @DEF_concatVarSize°;´)
+	int patchNum = offset / @DEF_concatVarSize° / @DEF_concatVarSize°;´)
 	@define(`@DEF_xPatchOffset°´, @eval(((@DEF_storedSizeX° ** 2) * (@DEF_NUM_PATCHES_Y° + 1)) / 2))
 	@define(`@DEF_yPatchOffset°´, @eval(@DEF_storedSizeX° / 2))
-	@define(`@CALL_RESTRICT_WITH_PADDING´, `@CALL_SPLIT_concatVar
+	@define(`@CALL_RESTRICT_WITH_PADDING´, `@CALL_SPLIT_concatVar°
 	@ifelse(`F´, `$1´, `int xPosStored, yPosStored;
 	if (xPos <= @DEF_SIZE_HALF_F°) { @dnl° lower valid end
 		xPosStored = xPos + @DEF_SIZE_HALF_F°;
@@ -430,17 +433,16 @@ __device__ @DEF_FFT_PRECISION(`C´) load_x_p_cmplx_mul_f_p(void+ __restrict__ da
 __device__ void store_y_plus_y_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
 	@CALL_RESTRICT_WITH_PADDING(`Y´, `s´, `atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element * ((float) (1. / (@DEF_FFT_SIZE° * @DEF_FFT_SIZE°))))´)
 }
-__global__ void kernel_nabla_f_to_nabla_tilde_f_X(float* __restrict__ v_4, float* __restrict__ X, float* __restrict__ nabla_tilde_f, float* __restrict__ alpha_beta, float* __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc) {
-	@CALL_RESTRICT_WITH_PADDING(`X´, `l´, `x_o_val = X[index];
-			v_4_val = v_4[index] * .5f;
-			nabla_f_o_val = nabla_tilde_f[index];
-			nabla_tilde_val = v_4_val > 0 && 0 == x_o_val ? 0 : v_4_val;
-			x_val = x_o_val - (*alpha_beta) * nabla_tilde_val;
-			sum_val = nabla_f_o_val * (x_o_val - x_val);
-			nabla_tilde_f[index] = nabla_tilde_val;
-			X[index] = x_val;´) 
-			
-
+__global__ void kernel_nabla_f_to_nabla_tilde_f_X((const float)* __restrict__ v_4, float* __restrict__ X, float* __restrict__ nabla_tilde_f, const (const float)* __restrict__ alpha_beta, float* __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, (unsigned int)* __restrict__ count, float* __restrict__ thread_part_sums) {
+	@DEF_conv_reduce(`x_o_val = X[index];
+		v_4_val = v_4[index] * .5f;
+		nabla_f_o_val = nabla_tilde_f[index];
+		nabla_tilde_val = v_4_val > 0 && 0 == x_o_val ? 0 : v_4_val;
+		x_val = x_o_val - (*alpha_beta) * nabla_tilde_val;
+		diff = nabla_f_o_val * (x_o_val - x_val);
+		nabla_tilde_f[index] = nabla_tilde_val;
+		X[index] = x_val;´, `thread_part_sums´, `scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc´)
+}
 scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__b
 int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
 	@dnl° TODO: maybe eventually make this use host memory where applicable 
@@ -586,7 +588,7 @@ int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TO
 	cudaEventDestroy(&helperEvents[1]);
 	for (int k = 0; k < num_images; k++) { @dnl° Create some events and streams, so we can better parallize the images where applicable.
 		cudaEventDestroy(&events[k]);
-		cudaStreamCreate(&streams[k]);
+		cudaStreamCreate(&streams[k]); @dnl° TODO: change this to the correct "get rid of this stream" thing.
 	}
 }
 typedef struct optimizeF_helper_struct {
