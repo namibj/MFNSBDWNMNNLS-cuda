@@ -443,6 +443,56 @@ __global__ void kernel_nabla_f_to_nabla_tilde_f_X((const float)* __restrict__ v_
 		nabla_tilde_f[index] = nabla_tilde_val;
 		X[index] = x_val;´, `thread_part_sums´, `scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc´)
 }
+_global__ void kernel_delta_nabla_tilde_f_X((const float3)* __restrict__ thread_part_sums, (const float)* __restrict__ nabla_tilde_f, (const float)* __restrict__ delta_tilde_f, (const float)* __restrict__ f_n, double* __restrict__ beta, (const int)* __restrict__ b, int* __restrict__ count, (const float)* __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, float* __restrict__ f_o, float* __restrict__ a) {
+
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	float f_n_i;
+	float scalar_prod;
+	float abs;
+	shared boolean isLastBlockDone;
+	shared float part_Sums[32];
+	@DEF_BLOCK_TOO_HIGH_THREADS_XY°
+		scalar_prod = 0;
+		abs = 0;
+	else {
+		scalar_prod = nabla_tilde_f[index] * delta_tilde_f[index];
+		abs = (*b%2==0?nabla_tilde_f:delta_tilde_f)[index];
+	}
+	if(index >= num_images)
+		f_n_i = 0;
+	else
+		f_n_i = f_n[index];
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`abs´, `thread_part_sums[blockIdx.x].x = abs;´)
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`scalar_prod´, `thread_part_sums[blockIdx.x].y = scalar_prod;´)
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`f_n_i´, `thread_part_sums[blockIdx.x].z = f_n_i;
+		__threadfence();
+		unsigned int value = atomicInc(count, gridDim.x);
+		isLastBlockDone = (value == (gridDim.x - 1));´)
+	__syncthreads();
+	if (isLastBlockDone) {
+		if (gridDim.x >  blockDim.x) {
+			abs = 0;
+			for (int x=0; (gridDim.x % blockDim.x) == 0 ? x < (gridDim.x / blockDim.x) : x <= (gridDim.x / blockDim.x); x++)
+				abs += (gridDim.x % blockDim.x) == 0 || threadIdx.x * blockDim.x < gridDim.x ? thread_part_sums[threadIdx.x * blockDim.x].x : 0;
+			scalar_prod = 0;
+			for (int x=0; (gridDim.x % blockDim.x) == 0 ? x < (gridDim.x / blockDim.x) : x <= (gridDim.x / blockDim.x); x++)
+				scalar_prod += (gridDim.x % blockDim.x) == 0 || threadIdx.x * blockDim.x < gridDim.x ? thread_part_sums[threadIdx.x * blockDim.x].y : 0;
+			f_n_i = 0;
+			for (int x=0; (gridDim.x % blockDim.x) == 0 ? x < (gridDim.x / blockDim.x) : x <= (gridDim.x / blockDim.x); x++)
+				f_n_i += (gridDim.x % blockDim.x) == 0 || threadIdx.x * blockDim.x < gridDim.x ? thread_part_sums[threadIdx.x * blockDim.x].z : 0;
+		}
+		@CALL_BUTTERFLY_BLOCK_REDUCION(`abs´, `´) @dnl° reduction across the partial sums
+		@CALL_BUTTERFLY_BLOCK_REDUCION(`scalar_prod´, `´) @dnl° reduction across the partial sums
+		@CALL_BUTTERFLY_BLOCK_REDUCION(`f_n_i´, `if(*b%2==0)
+			if(abs<@DEF__N_target_optimization_X°) *finished = true;
+			else *a = (float) (((double) abs) / ((double) scalar_prod));
+		else  *a = (float) (((double) scalar_prod) / ((double) abs));
+		if(*f_o - f_n_i <= @DEF_SIGMA_X° * *scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc)
+			*beta *= @DEF_ETA_X°;
+		*f_o = f_n_i; @dnl° TODO: make sure to do via pointer-switching (double buffering): nabla_f_o = nabla_tilde_F
+		*count = 0;´) @dnl° reduction across the partial sums
+	}
+}
 scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__b
 int optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
 	@dnl° TODO: maybe eventually make this use host memory where applicable 
