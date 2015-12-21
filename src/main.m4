@@ -10,9 +10,19 @@
 #include <driver_functions.h>
 #include <unistd.h>
 #include <sched.h>
-@define(`stop', `@dnl°')
-@changequote(`[', `]') stop ´´)
-@changequote([`], [´])
+define(`stop', `dnl°')dnl
+changequote(`[', `]') stop ´´)dnl
+changequote([`], [´])dnl
+undefine(`stop´)dnl
+define(`@dnl°´, defn(`dnl´))dnl
+define(`@define´, defn(`define´))dnl
+define(`@eval´, defn(èval´))dnl
+define(`@divert´, defn`divert´))dnl
+define(`@ifelse´, defn(ìfelse´))dnl
+define(`@undivert´, defn(ùndivert´))dnl
+define(`@pushdef´, defn(`pushdef´))dnl
+define(`@popdef´, defn(`popdef´))dnl
+changeword(`@|@[a-zA-Z0-9_]+|@[a-zA-Z0-9_]+°´)@dnl°
 @dnl° define(`@CALL_APPEND´,`define(`@DEF_MYLIST°´,ifdef(`@DEF_MYLIST°´,`[changequote([,])@DEF_MYLIST°[,$1]changequote(`,´)]´,[$1]))´)
 @define(`@DEF_concatVarSize°´, eval(`1 ** 8´))
 @define(`@DEF_m°´, eval(`10 * 2´))@dnl° The non-monotonic NNLS solvers inner iteration count M, which has to be even.
