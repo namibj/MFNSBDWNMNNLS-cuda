@@ -335,35 +335,39 @@ int setFloatDeviceZero(float* data, size_t count, int blocksize, cudaStream_t st
 
 void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restrict__ userData) {
 	struct streamCallback_informations *informations = ((struct streamCallback_informations*) userData);
-	if (informations->b % 2 == 0) {
-		float abs_nabla_f = 0;
-		float delta_nabla_f = 0;
-		if (*(informations->f_n_h) < @DEF_N_target_optimization_F°) {
-			@dnl° optimization is finished
-			informations->finished = true;
-			return;
+
+	__shared__ float part_Sums[32];
+
+	float value;
+
+	__shared__ float delta_nabla_f;
+	__shared__ float delta_or_nabla_abs;
+	__shared__ float complicatedSums;
+
+	value = delta_nabla_f_part_sums[threadIdx.x];
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `delta_nabla_f = value;´)
+
+	value = part_sums_var_d[threadIdx.x];
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `delta_or_nabla_abs = value;´)
+
+	value = nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[threadIdx.x];
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `compilcatedSums = value;´)
+
+	if (threadIdx.x == 0) {
+		if (informations->b % 2 == 0) {
+			if (*(informations->f_n_h) < @DEF_N_target_optimization_F°) {
+				@dnl° optimization is finished
+				informations->finished = true;
+				return;
+			}
+			informations->helper_struct_h->alpha = delta_or_nabla_abs / delta_nabla_f;
+		} else {
+			informations->helper_struct_h->alpha = delta_nabla_f / delta_or_nabla_abs;
 		}
-		for (int i=0; i < informations->helper_struct_d->block_num; i++) {
-			abs_nabla_f += informations->part_sums_var_h[i];
-			delta_nabla_f += informations->delta_nabla_f_part_sums_h[i];
-		}
-		informations->helper_struct_h->alpha = abs_nabla_f / delta_nabla_f;
-	} else {
-		float abs_delta_f = 0;
-		float delta_nabla_f = 0;
-		for (int i = 0; i < informations->helper_struct_h->block_num; i++) {
-			abs_delta_f += informations->part_sums_var_h[i];
-			delta_nabla_f += informations->delta_nabla_f_part_sums_h[i];
-		}
-		informations->helper_struct_h->alpha = delta_nabla_f / abs_delta_f;
+		if (informations->f_o_d - *(informations->f_n_d) <= @DEF_SIGMA_F° * complicatedSums)
+			informations->helper_struct_d->beta *= @DEF_BETA_F°;
+		informations->f_o_d = *(informations->f_n_d);
 	}
-	float complicatedSums = 0;
-	for (int i = 0; i < informations->helper_struct_h->block_num; i++) {
-		complicatedSums += (informations->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h)[i];
-	}
-	if (informations->f_o_h - *(informations->f_n_h) <= @DEF_SIGMA_F° * complicatedSums)
-		informations->helper_struct_h->beta *= @DEF_BETA_F°;
-	informations->f_o_h = *(informations->f_n_h);
 }
 
 int optimizeF(float* f_h, float* x_h, float* y_k_h, cudaStream_t stream) {
