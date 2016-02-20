@@ -64,7 +64,7 @@ struct store_f_X_T_1_informations {
 	float* abs_vec_delta_f_part_sums;
 	};
 };
-struct streamCallback_informations{
+struct (*streamCallback)_informations{
 	int b;
 	float* f_n_h;
 	boolean finished;
@@ -333,8 +333,7 @@ int setFloatDeviceZero(float* data, size_t count, int blocksize, cudaStream_t st
 	return 0;
 }
 
-void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restrict__ userData) {
-	struct streamCallback_informations *informations = ((struct streamCallback_informations*) userData);
+__global__ void __launch_bounds__(1024, 1) optimizeFcallback(struct streamCallback_informations * __restrict__ informations) {
 
 	__shared__ float part_Sums[32];
 
@@ -344,22 +343,33 @@ void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restric
 	__shared__ float delta_or_nabla_abs;
 	__shared__ float complicatedSums;
 
-	value = delta_nabla_f_part_sums[threadIdx.x];
+	float * delta_nabla_f_part_sums = informations->helper_struct_d->nabla_f_scalar_prod_delta_f_part_sums;
+	float * part_Sums_var_d = informations->helper_struct_d->abs_vec_nabla_f_part_sums;
+	float * nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d = informations->helper_struct_d->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d;
+
+	value = 0;
+	for (informations->helper_struct_d->block_size / 1024)
+		value += delta_nabla_f_part_sums[threadIdx.x];
 	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `delta_nabla_f = value;´)
 
-	value = part_sums_var_d[threadIdx.x];
+	value = 0;
+	for (informations->helper_struct_d->block_size / 1024)
+		value += part_sums_var_d[threadIdx.x];
 	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `delta_or_nabla_abs = value;´)
 
-	value = nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[threadIdx.x];
+	value = 0;
+	for (informations->helper_struct_d->block_size / 1024)
+		value += nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[threadIdx.x];
 	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `compilcatedSums = value;´)
 
 	if (threadIdx.x == 0) {
 		if (informations->b % 2 == 0) {
 			if (*(informations->f_n_h) < @DEF_N_target_optimization_F°) {
 				@dnl° optimization is finished
-				informations->finished = true;
+				informations->finished = 2;
 				return;
-			}
+			} else 
+				informations->finished = 1;
 			informations->helper_struct_h->alpha = delta_or_nabla_abs / delta_nabla_f;
 		} else {
 			informations->helper_struct_h->alpha = delta_nabla_f / delta_or_nabla_abs;
@@ -371,7 +381,6 @@ void optimizeFcallback(cudaStream_t stream,  cudaError_t status, void* __restric
 }
 
 int optimizeF(float* f_h, float* x_h, float* y_k_h, cudaStream_t stream) {
-	struct streamCallback_informations streamCallback;
 	@define(`@_free_stack´, `@ifdef(`@_free_stack1´, `@_free_stack1°@popdef(`@_free_stack1´)@_free_stack°´)´)
 	@define(`@DEF_CU_MALLOC´, `@ifelse(`ndef´, `$5´,,`$2* ´)$1 = NULL;
 	cudaMalloc´@ifelse(`h´, `$4´, `Host@pushdef(`@_free_stack1´, `cudaFreeHost($1);
@@ -382,7 +391,8 @@ $7´)@divert(1)
 $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (without the '*'), $3 = number of elements to allocate, $4 = '' (just jump with a double ','), $5 = host pointer name, $6 = stream, $7 = optional (somthing to execute after the allocation and before scheduling the copy for the bunch of copys, $8 = optional (to execute after copying)
 	@DEF_CU_MALLOC_HTDC(`f_d´, `float´, `@DEF_NUM_F_VALS°´,, `f_h´, `stream´)
 	@DEF_CU_MALLOC_HTDC(`y_k_d´, `float´, `@DEF_SIZE_Y°´,, `y_k_h´, `stream´)
-	@DEF_CU_MALLOC_HTDC(`helper_struct_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `@DEF_CU_MALLOC(`helper_struct_h´, `store_f_X_T_1_informations´, 1, `h´)
+	@DEF_CU_MALLOC_HTDC(`helper_struct`_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `@DEF_CU_MALLOC(`helper_struct_h´, `store_f_X_T_1_informations´, 1, `h´)
+	@DEF_CU_MALLOC(`streamCallback´, `struct streamCallback_informations´, `1´, `h´)
 	helper_struct_h->alpha = 0.5;
 	helper_struct_h->beta = 0.5;´)
 	@DEF_CU_MALLOC(`f_n_h´, `float´, `1´, `h´)
@@ -400,10 +410,10 @@ $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@DEF_CU_MALLOC(`helper_struct_h->abs_vec_delta_f_part_sums´, `float´, @DEF_NUM_F_VALS°,,`ndef´)
 	@DEF_CU_MALLOC(`helper_struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d´, `float´, @DEF_NUM_F_VALS°,,`ndef´)
 	@DEF_CU_MALLOC(`helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums´, `float´, 32768,,`ndef´) @dnl° TODO: care and decide about helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums size '32768'
-	streamCallback.finished = false;
-	streamCallback.helper_struct_d = helper_struct_d;
-	streamCallback.helper_struct_h = helper_struct_h;
-	streamCallback.f_n_h = f_n_h;
+	(*streamCallback).finished = 0;
+	(*streamCallback).helper_struct_d = helper_struct_d;
+	(*streamCallback).helper_struct_h = helper_struct_h;
+	(*streamCallback).f_n_h = f_n_h;
 	@dnl° TODO: check for memset to f_n_d (if it is necessary)
 	@define(`@nargs´, `$#´) @dnl° just emit the number of arguments given. Usefull to determine the size of a grouped argument.
 	@define(`@_echo_q´, `$@´) @dnl° just a macro to ecpand into all the args, qouted. Usefull to expand a grouped argument.
@@ -457,28 +467,21 @@ $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 			else
 				cufftExecC2R(plan_f_X_T_2_delta_tilde_f_uneven_b_F, v_tmp_cmplx_d, v_3_d);
 			cudaMemcpyAsync((void*) helper_struct_h, (void*) helper_struct_d, sizeof(store_f_X_T_1_informations), cudaMemcpyDeviceToHost, stream);
-			if (b == 0) {
-				while(cudaErrorNotReady == cudaStreamQuery(stream))
-					usleep(@DEF_SLEEP_TIME_POLL°); @dnl° TODO: convert from current runtime-based allocation mechanism to precalculated one, thereby preventing the hangup happening here.
-				@DEF_CU_MALLOC(`delta_nabla_f_part_sums_h´, `float´, `helper_struct_h->block_num´, `h´) @dnl° TODO: further research the reason of using an additional '0' as the last argument to this call
-				@DEF_CU_MALLOC(`part_sums_var_h´, `float´, `helper_struct_h->block_num´, `h´)
-				@DEF_CU_MALLOC(`streamCallback.nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h´, `float´, `helper_struct_h->block_num´, `h´, `ndef´)
-				streamCallback.delta_nabla_f_part_sums_h = delta_nabla_f_part_sums_h;
-				streamCallback.part_sums_var_h = part_sums_var_h;
-			}
 			cudaMemcpyAsync((void*) delta_nabla_f_part_sums_h, (void*) helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
 			if (b % 2 == 0)
 				cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_nabla_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
 			else
 				cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
 			cudaMemcpyAsync((void*) f_n_h, (void*) f_n_d, sizeof(float), cudaMemcpyDeviceToHost, stream);
-			cudaMemcpyAsync((void*) streamCallback.nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h, (void*) helper_struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
-			cudaStreamAddCallback(stream, (cudaStreamCallback_t) optimizeFcallback, (void*) &streamCallback, 0);
+			cudaMemcpyAsync((void*) (*streamCallback).nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h, (void*) helper_struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			optimizeFcallback<<<1, 1024, 0, stream>>>(streamCallback);
 			if (b % 2 == 0) {
-				while(cudaErrorNotReady == cudaStreamQuery(stream))
+				while((*streamCallback).finished == 0)
 					usleep(@DEF_SLEEP_TIME_POLL°);
-				if (streamCallback.finished)
+				if ((*streamCallback).finished == 2) @dnl° 2 means precision reached, 1 means precision not reached, i.e. schedule the next iteration, 0 means noz yet decided.
 					goto end_loop;
+				else
+					(*streamCallback).finished = 0; @dnl° reset the poll flag if used again.
 			}
 			cudaMemcpyAsync(helper_struct_d, helper_struct_h, sizeof(store_f_X_T_1_informations), cudaMemcpyHostToDevice, stream);
 		}
