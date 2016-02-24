@@ -34,6 +34,16 @@
 								<inputType id="nvcc.compiler.input.c.981183368" superClass="nvcc.compiler.input.c"/>
 							</tool>
 							<tool id="nvcc.linker.base.1898078469" name="NVCC Linker" superClass="nvcc.linker.base">
+								<option id="nvcc.linker.option.paths.1272092917" name="Library search path (-L)" superClass="nvcc.linker.option.paths" valueType="libPaths">
+									<listOptionValue builtIn="false" value="/opt/cuda/lib64"/>
+								</option>
+								<option id="nvcc.linker.option.libs.1023058861" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs">
+									<listOptionValue builtIn="false" value="cufft_static"/>
+									<listOptionValue builtIn="false" value="culibos"/>
+								</option>
+								<option id="nvcc.linker.option.userobjs.1734612648" name="Other objects" superClass="nvcc.linker.option.userobjs" valueType="userObjs">
+									<listOptionValue builtIn="false" value="/opt/cuda/lib64/libcufft_static.a"/>
+								</option>
 								<inputType id="nvcc.linker.input.1706560850" superClass="nvcc.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>

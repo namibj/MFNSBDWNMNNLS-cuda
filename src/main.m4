@@ -64,7 +64,7 @@ struct store_f_X_T_1_informations {
 	float* abs_vec_delta_f_part_sums;
 	};
 };
-struct (*streamCallback)_informations{
+struct streamCallback_informations{
 	int b;
 	float* f_n_h;
 	boolean finished;
@@ -208,8 +208,8 @@ __device__ @DEF_FFT_PRECISION(`C´) load_F_X_m_F_X(void* __restrict__ dataIn, si
 	return @ifelse(`float´, @DEF_FFT_PRECISION_TYPE°, `cuCmulf´)(((@DEF_FFT_PRECISION(`C´)*) (dataIn))[offset], ((@DEF_FFT_PRECISION(`C´)*) (callerInfo))[offset]);  @dnl° TODO: include double precision as an option for the commplex multipliction.
 }
 
-__device__ void store_v_4_F_T_v_4_p_weight_half_v_1_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
-	@CALL_RESTRICT_WITH_PADDING(`Y´, `s´, `element *= .5f * @CALL_GEWICHTUNG(`xPosStored - (@DEF_storedSizeX° /2)´, `yPosStored - (@DEF_storedSizeX° /2)´);
+__device__ void store_x_plus_x_weights_X(void* __restrict__ dataOut, size_t offset, @DEF_FFT_PRECISION(`R´) element, void* __restrict__ callerInfo, void* __restrict__ sharedPointer) {
+	@CALL_RESTRICT_WITH_PADDING(`X´, `s´, `element *= .5f * @CALL_GEWICHTUNG(`xPosStored - (@DEF_storedSizeX° /2)´, `yPosStored - (@DEF_storedSizeX° /2)´);
 	atomicAdd(&((@DEF_FFT_PRECISION(`R´)*) (dataOut))[patchOffset + xPosStored * @DEF_storedSizeX° + yPosStored], element);
 ´)
 }
@@ -344,23 +344,23 @@ __global__ void __launch_bounds__(1024, 1) optimizeFcallback(struct streamCallba
 	__shared__ float complicatedSums;
 
 	float * delta_nabla_f_part_sums = informations->helper_struct_d->nabla_f_scalar_prod_delta_f_part_sums;
-	float * part_Sums_var_d = informations->helper_struct_d->abs_vec_nabla_f_part_sums;
+	float * part_sums_var_d = informations->helper_struct_d->abs_vec_nabla_f_part_sums;
 	float * nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d = informations->helper_struct_d->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d;
 
 	value = 0;
-	for (informations->helper_struct_d->block_size / 1024)
-		value += delta_nabla_f_part_sums[threadIdx.x];
+	//for (informations->helper_struct_d->block_size / 1024)
+		value = delta_nabla_f_part_sums[threadIdx.x];
 	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `delta_nabla_f = value;´)
 
 	value = 0;
-	for (informations->helper_struct_d->block_size / 1024)
-		value += part_sums_var_d[threadIdx.x];
+	//for (informations->helper_struct_d->block_size / 1024)
+		value = part_sums_var_d[threadIdx.x];
 	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `delta_or_nabla_abs = value;´)
 
 	value = 0;
-	for (informations->helper_struct_d->block_size / 1024)
-		value += nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[threadIdx.x];
-	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `compilcatedSums = value;´)
+	//for (informations->helper_struct_d->block_size / 1024)
+		value = nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d[threadIdx.x];
+	@CALL_BUTTERFLY_BLOCK_REDUCTION(`value´, `complicatedSums = value;´)
 
 	if (threadIdx.x == 0) {
 		if (informations->b % 2 == 0) {
@@ -374,9 +374,9 @@ __global__ void __launch_bounds__(1024, 1) optimizeFcallback(struct streamCallba
 		} else {
 			informations->helper_struct_h->alpha = delta_nabla_f / delta_or_nabla_abs;
 		}
-		if (informations->f_o_d - *(informations->f_n_d) <= @DEF_SIGMA_F° * complicatedSums)
+		if (informations->f_o_h - *(informations->f_n_h) <= @DEF_SIGMA_F° * complicatedSums)
 			informations->helper_struct_d->beta *= @DEF_BETA_F°;
-		informations->f_o_d = *(informations->f_n_d);
+		informations->f_o_h = *(informations->f_n_h);
 	}
 }
 
@@ -391,7 +391,7 @@ $7´)@divert(1)
 $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (without the '*'), $3 = number of elements to allocate, $4 = '' (just jump with a double ','), $5 = host pointer name, $6 = stream, $7 = optional (somthing to execute after the allocation and before scheduling the copy for the bunch of copys, $8 = optional (to execute after copying)
 	@DEF_CU_MALLOC_HTDC(`f_d´, `float´, `@DEF_NUM_F_VALS°´,, `f_h´, `stream´)
 	@DEF_CU_MALLOC_HTDC(`y_k_d´, `float´, `@DEF_SIZE_Y°´,, `y_k_h´, `stream´)
-	@DEF_CU_MALLOC_HTDC(`helper_struct`_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `@DEF_CU_MALLOC(`helper_struct_h´, `store_f_X_T_1_informations´, 1, `h´)
+	@DEF_CU_MALLOC_HTDC(`helper_struct_d´, `store_f_X_T_1_informations´, 1,, `helper_struct_h´, `stream´, `@DEF_CU_MALLOC(`helper_struct_h´, `store_f_X_T_1_informations´, 1, `h´)
 	@DEF_CU_MALLOC(`streamCallback´, `struct streamCallback_informations´, `1´, `h´)
 	helper_struct_h->alpha = 0.5;
 	helper_struct_h->beta = 0.5;´)
@@ -422,7 +422,7 @@ $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 	@define(`@_CB_PLAN_STMT´, `@_CB_PLAN_STMT1(`$4´, `$2´, `$3´, (`$#´, `$5´), @_echo_q°$1)´)
 	@define(`@_CB_PLAN_STMT1´, `@ifelse(5, @echo_1$4, `for (int k = 0; k < @echo_2$4; k++) ´)cufftXtSetCallback(plan_$2@ifelse(5, @echo_1$4, `[k]´), ((void**) &_h_@ifelse(`l´, `$1´, `load_´, `s´, `$1´, `store_´)@ifelse(`´, `$5´, `$2´, $5)), CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), @ifelse(`´, `$6´, `NULL´, `((void**) &$6_d@ifelse(5, @echo_1$4, `[k]´))´));@ifelse(`6´, `$#´, `´, `
 		cufftXtSetCallbackSharedSize(plan_$2@ifelse(5, @echo_1$4, `[k]´), CUFFT_CB_@ifelse(`lC´, `$1$3´, `LD_COMPLEX´, `lR´, `$1$3´, `LD_REAL´, `sC´, `$1$3´, `ST_REAL´, `sR´, `$1$3´, `ST_COMPLEX´), $7);´)´)
-		@dnl° TODO: insert the shared memory reservation call (with semicolon), as well as the following at the end: ´)´) m4_dnl <insert documentation here>
+		@dnl° TODO: insert the shared memory reservation call (with semicolon)
 	@define(`@DEF_CUFFT_HANDLE´, `cufftHandle plan_$1@ifelse(6, `$#´, `[$6]´);
 	{
 		@ifelse(6, `$#´, `for(int k = 0; k < $6; k++) cufftCreate(&plan_$1[k]);´, `cufftCreate(&plan_$1);´)
@@ -467,13 +467,13 @@ $8@divert(0)´)´) @dnl° $1 = device pointer name, $2 = device pointer type (wi
 			else
 				cufftExecC2R(plan_f_X_T_2_delta_tilde_f_uneven_b_F, v_tmp_cmplx_d, v_3_d);
 			cudaMemcpyAsync((void*) helper_struct_h, (void*) helper_struct_d, sizeof(store_f_X_T_1_informations), cudaMemcpyDeviceToHost, stream);
-			cudaMemcpyAsync((void*) delta_nabla_f_part_sums_h, (void*) helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
-			if (b % 2 == 0)
-				cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_nabla_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
-			else
-				cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			//cudaMemcpyAsync((void*) delta_nabla_f_part_sums_h, (void*) helper_struct_h->nabla_f_scalar_prod_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			//if (b % 2 == 0)
+			//	cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_nabla_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			//else
+			//	cudaMemcpyAsync((void*) part_sums_var_h, (void*) helper_struct_h->abs_vec_delta_f_part_sums, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
 			cudaMemcpyAsync((void*) f_n_h, (void*) f_n_d, sizeof(float), cudaMemcpyDeviceToHost, stream);
-			cudaMemcpyAsync((void*) (*streamCallback).nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h, (void*) helper_struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
+			//cudaMemcpyAsync((void*) (*streamCallback).nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_h, (void*) helper_struct_h->nabla_f_o_scalar_prod_bracketo_x_o_minus_new_f_bracketc_part_sums_d, sizeof(float) * helper_struct_h->block_num, cudaMemcpyDeviceToHost, stream);
 			optimizeFcallback<<<1, 1024, 0, stream>>>(streamCallback);
 			if (b % 2 == 0) {
 				while((*streamCallback).finished == 0)
@@ -508,7 +508,7 @@ __global__ void kernel_nabla_f_to_nabla_tilde_f_X(const float* const __restrict_
 		nabla_tilde_f[index] = nabla_tilde_val;
 		X[index] = x_val;´, `thread_part_sums´, `scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc´)
 }
-__global__ void kernel_delta_nabla_tilde_f_X(float3* const __restrict__ thread_part_sums, const float* const __restrict__ nabla_tilde_f, const float* const __restrict__ delta_tilde_f, const float* const __restrict__ f_n, double* const __restrict__ beta, const int* const __restrict__ b, unsigned int* const __restrict__ count, const float* const __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, float* const __restrict__ f_o, float* const __restrict__ a, float* __restricted__ alpha_beta, const int num_images, boolean * const __restrict__ finished) {
+__global__ void kernel_delta_nabla_tilde_f_X(float3* const __restrict__ thread_part_sums, const float* const __restrict__ nabla_tilde_f, const float* const __restrict__ delta_tilde_f, const float* const __restrict__ f_n, double* const __restrict__ beta, const int* const __restrict__ b, unsigned int* const __restrict__ count, const float* const __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, float* const __restrict__ f_o, float* const __restrict__ a, float* __restrict__ alpha_beta, const int num_images, boolean * const __restrict__ finished) {
 
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	float f_n_i;
@@ -552,9 +552,9 @@ __global__ void kernel_delta_nabla_tilde_f_X(float3* const __restrict__ thread_p
 			if(abs<@DEF_N_target_optimization_X°) *finished = true;
 			else *a = (float) (((double) abs) / ((double) scalar_prod));
 		else  *a = (float) (((double) scalar_prod) / ((double) abs));
-		if(b%@DEF_m° == @DEF_m° - 1 && *f_o - f_n_i <= @DEF_SIGMA_X° * *scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc)
+		if((*b%@DEF_m°) == (@DEF_m° - 1) && (*f_o - f_n_i) <= (@DEF_SIGMA_X° * (*scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc)))
 			*beta *= @DEF_BETA_X°;
-		*alpha_beta = *alpha * *beta;
+		*alpha_beta = *a * *beta;
 		*f_o = f_n_i; @dnl° TODO: make sure to do via pointer-switching (double buffering): nabla_f_o = nabla_tilde_F
 		*count = 0;´) @dnl° reduction across the partial sums
 	}
@@ -565,7 +565,17 @@ void optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° T
 	cudaStreamCreate(&stream);
 
 	@DEF_CU_MALLOC(`finished´, `boolean´, 1, `h´)
+	@DEF_CU_MALLOC(`alpha_beta´, `float´, 1, `h´)
+	@DEF_CU_MALLOC(`b´, `int´, 1, `h´)
+	@DEF_CU_MALLOC(`beta´, `double´, 1, `h´)
+	@DEF_CU_MALLOC(`f_o´, `float´, 1, `h´)
+	@DEF_CU_MALLOC(`a´, `float´, 1, `h´)
+	@DEF_CU_MALLOC(`f_n´, `float´, num_images, `h´)
+	@DEF_CU_MALLOC(`scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc´, `float´, 1, `h´)
 	*finished = false;
+	*alpha_beta = 1;
+	*beta = 1;
+	*a = 1;
 	@DEF_CU_MALLOC(`count_d´, `unsigned int´, 1)
 	@DEF_CU_MALLOC(`x_p_X_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°))
 	@DEF_CU_MALLOC(`f_n_part_sums_d´, `float´, `@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´)´)
@@ -576,16 +586,17 @@ void optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° T
 	@DEF_CU_MALLOC(`nabla_tilde_f´, `float´, `@DEF_SIZE_Y°´)
 	@DEF_CU_MALLOC(`v_4_d´, `float´, `@DEF_SIZE_Y°´)
 	@DEF_CU_MALLOC(`v_3_d´, `float´, `@DEF_SIZE_Y°´)
+	@DEF_CU_MALLOC(`x_d´, `float´, `@DEF_SIZE_Y°´)
 
 	@DEF_CUFFT_HANDLE(`f_p_X´, `R´, `stream´, (,), ())
 	@DEF_CUFFT_HANDLE(`f_p_X_T´, `R´, `stream´, (`f_X_1_l_F´,), (`f_T_p_conj_fft_X´,))
 	@DEF_CUFFT_HANDLE(`x_p_X´, `R´, `stream´, (,), ())
 	@DEF_CUFFT_HANDLE(`F_k´, `C´, `stream´, (`F_X_m_F_X´, `x_p_X´), (`y_plus_y_X´,))
 	@DEF_CUFFT_HANDLE(`v_3_X_T_F´, `R´, `stream´, (,), ())
-	@DEF_CUFFT_HANDLE(`F_T_k´, `C´, `stream´, (`F_X_m_F_X´, `v_tmp_cmplx_d´), (`x_plus_x_weights_X´,))
+	@DEF_CUFFT_HANDLE(`F_T_k´, `C´, `stream´, (`F_X_m_F_X´, `v_tmp_cmplx´), (`x_plus_x_weights_X´,))
 
 	while(!(*finished)){ @dnl° fix this. Could result in an infinite loop if machine precision limits are reached in a bad enough way.
-		for (int b = 0; b < @DEF_m°; b++) {
+		for (*b = 0; *b < @DEF_m°; (*b)++) {
 
 			setFloatDeviceZero(v_4_d, @DEF_SIZE_Y°, 128, stream);
 
@@ -599,12 +610,12 @@ void optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° T
 
 				cufftExecC2R(plan_F_k, f_p_d, v_3_d);
 
-				kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_bracketc_sqr<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(v_3_d, v_3_d, y_k_h[k], f_n_part_sums_d, &f_n_d[k], count_d);
+				kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_bracketc_sqr<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(v_3_d, v_3_d, y_k_h[k], f_n_part_sums_d, &f_n[k], count_d);
 				cufftExecR2C(plan_v_3_X_T_F, v_3_d, v_tmp_cmplx_d);
 				cufftExecC2R(plan_F_T_k, f_t_p_d, v_4_d);
 			}
 
-			kernel_nabla_f_to_nabla_tilde_f_X<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(v_4_d, x_d, nabla_tilde_f, alpha_beta, scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, count, f_n_part_sums_d);
+			kernel_nabla_f_to_nabla_tilde_f_X<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(v_4_d, x_d, nabla_tilde_f, alpha_beta, scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, count_d, f_n_part_sums_d);
 			cufftExecR2C(plan_x_p_X, nabla_tilde_f, x_p_X_d);
 
 			setFloatDeviceZero(v_4_d, @DEF_SIZE_Y°, 128, stream);
@@ -621,7 +632,7 @@ void optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° T
 				cufftExecC2R(plan_F_T_k, f_t_p_d, v_4_d);
 			}
 
-			kernel_delta_nabla_tilde_f_X<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(tri_part_sums, nabla_tilde_f, delta_tilde_f, f_n, beta, b, count, scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, f_o, a, alpha_beta, num_images, finished);
+			kernel_delta_nabla_tilde_f_X<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(tri_part_sums, nabla_tilde_f, v_4_d, f_n, beta, b, count_d, scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, f_o, a, alpha_beta, num_images, finished);
 		}
 	}
 	while(cudaErrorNotReady == cudaStreamQuery(stream)) sched_yield();
@@ -632,11 +643,11 @@ typedef struct optimizeF_helper_struct {
 	float* y_k_h;
 	float* x_h; @dnl° temporary to fix more typos.
 } optimizeF_helper_struct_t;
-void optimizeF_helper(void* datav) {
-	optimizeF_helper_struct_t *data = (optimizeF_helper_struct_t*) datav;
+void optimizeF_helper(optimizeF_helper_struct_t data) {
+	//optimizeF_helper_struct_t *data = (optimizeF_helper_struct_t*) datav;
 	cudaStream_t stream;
 	cudaStreamCreate(&stream);
-	optimizeF(data->f_h, data->y_k_h, data->x_h, stream);
+	optimizeF(data.f_h, data.y_k_h, data.x_h, stream);
 	while(cudaErrorNotReady == cudaStreamQuery(stream)) sched_yield();
 	cudaStreamDestroy(stream);
 	return;
@@ -648,17 +659,17 @@ void computeRecursive(float** f_h, float** y_k_h, float* x, int num_images){
 			computeRecursive(&f_h[0], &y_k_h[0], x_h_1, num_images/2);
 			computeRecursive(&f_h[num_images/2], &y_k_h[num_images/2], x_h_2, num_images/2);
 			for(int i=0; i < num_images / 2;i++)
-				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2}));
+				optimizeF_helper((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2});
 			for(int i=num_images/2; i < num_images; i++)
-				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1}));
+				optimizeF_helper((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1});
 			@_free_stack°
 		} else {
 			float* x_h_1 = y_k_h[1];
 			float* x_h_2 = y_k_h[0];
 			for(int i=0; i < num_images / 2;i++)
-				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2}));
+				optimizeF_helper((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2});
 			for(int i=num_images/2; i < num_images; i++)
-				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1}));
+				optimizeF_helper((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1});
 		}
 		optimizeX(f_h, x, y_k_h, num_images);
 	}
