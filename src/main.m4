@@ -1,5 +1,5 @@
 /*
- *	Copyright 2015 Merlin Kramer
+ *	Copyright 2015,2016 Merlin Kramer
  *	Licensed under the GNU Affero General Public License v3.0
  */
 #include <stdio.h>
@@ -368,7 +368,7 @@ __global__ void __launch_bounds__(1024, 1) optimizeFcallback(struct streamCallba
 				@dnl° optimization is finished
 				informations->finished = 2;
 				return;
-			} else 
+			} else
 				informations->finished = 1;
 			informations->helper_struct_h->alpha = delta_or_nabla_abs / delta_nabla_f;
 		} else {
