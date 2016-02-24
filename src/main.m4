@@ -508,7 +508,7 @@ __global__ void kernel_nabla_f_to_nabla_tilde_f_X(const float* const __restrict_
 		nabla_tilde_f[index] = nabla_tilde_val;
 		X[index] = x_val;´, `thread_part_sums´, `scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc´)
 }
-__global__ void kernel_delta_nabla_tilde_f_X(float3* const __restrict__ thread_part_sums, const float* const __restrict__ nabla_tilde_f, const float* const __restrict__ delta_tilde_f, const float* const __restrict__ f_n, double* const __restrict__ beta, const int* const __restrict__ b, unsigned int* const __restrict__ count, const float* const __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, float* const __restrict__ f_o, float* const __restrict__ a, const int num_images, boolean * const __restrict__ finished) {
+__global__ void kernel_delta_nabla_tilde_f_X(float3* const __restrict__ thread_part_sums, const float* const __restrict__ nabla_tilde_f, const float* const __restrict__ delta_tilde_f, const float* const __restrict__ f_n, double* const __restrict__ beta, const int* const __restrict__ b, unsigned int* const __restrict__ count, const float* const __restrict__ scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, float* const __restrict__ f_o, float* const __restrict__ a, float* __restricted__ alpha_beta, const int num_images, boolean * const __restrict__ finished) {
 
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	float f_n_i;
@@ -552,160 +552,80 @@ __global__ void kernel_delta_nabla_tilde_f_X(float3* const __restrict__ thread_p
 			if(abs<@DEF_N_target_optimization_X°) *finished = true;
 			else *a = (float) (((double) abs) / ((double) scalar_prod));
 		else  *a = (float) (((double) scalar_prod) / ((double) abs));
-		if(*f_o - f_n_i <= @DEF_SIGMA_X° * *scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc)
+		if(b%@DEF_m° == @DEF_m° - 1 && *f_o - f_n_i <= @DEF_SIGMA_X° * *scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc)
 			*beta *= @DEF_BETA_X°;
+		*alpha_beta = *alpha * *beta;
 		*f_o = f_n_i; @dnl° TODO: make sure to do via pointer-switching (double buffering): nabla_f_o = nabla_tilde_F
 		*count = 0;´) @dnl° reduction across the partial sums
 	}
 }
 @dnl° scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__b @dnl° figure out where this came from. Git can help.
 void optimizeX(float** f_h, float* x_h, float** y_k_h, int num_images){ @dnl° TODO: convert the symbolic code to actual code
-	@dnl° TODO: maybe eventually make this use host memory where applicable 
-	cudaEvent_t events[num_images];
-	cudaStream_t streams[num_images];
-	cudaEvent_t helperEvents[2];
-	
-	@DEF_CUFFT_HANDLE(`f_p_X´, `R´, `streams´, (,), (), `num_images´)
-	@DEF_CUFFT_HANDLE(`f_p_X_T´, `R´, `streams´, (`f_X_1_l_F´,), (`f_T_p_conj_fft_X´,), `num_images´)
-	@DEF_CUFFT_HANDLE(`x_p_X´, `R´, `(streams[0])´, (,), ())
-	@DEF_CUFFT_HANDLE(`F_k´, `C´, `streams´, (`F_X_m_F_X´,), (`y_plus_y_X´,), `num_images´)
-	@DEF_CUFFT_HANDLE(`v_3_X_T_F´, `R´, `streams´, (,), (), `num_images´)
-	@DEF_CUFFT_HANDLE(`F_T_k´, `C´, `streams´, (`F_X_m_F_X´,), (`x_plus_x_weights_X´,), `num_images´)
-	@DEF_CUFFT_HANDLE(`nabla_tilde_f_p´, `R´, `(streams[0])´, (`x_p_F´,), ())
-	cudaEventCreateWithFlags(&helperEvents[0], cudaEventDisableTiming);
-	cudaEventCreateWithFlags(&helperEvents[1], cudaEventDisableTiming);
-	for (int k = 0; k < num_images; k++) { @dnl° Create some events and streams, so we can better parallize the images where applicable.
-		cudaEventCreateWithFlags(&events[k], cudaEventDisableTiming);
-		cudaStreamCreate(&streams[k]);
-	}
-	{ // precompute F_{k,i,j} and F^T_{k,i,j}
-		for (int k = 0; k < num_images; k++) {
+	cudaStream_t stream;
+	cudaStreamCreate(&stream);
 
-			// f_p_k{_i,j} := 2Dfft(gewichtung(zuSchnipselGröße(f_k{_i,j})))
-			// => F_{k,k,j}
-//			load_f_p_X() -> NULL [stream k] @dnl° DONE see: plan_f_p_X[k]
+	@DEF_CU_MALLOC(`finished´, `boolean´, 1, `h´)
+	*finished = false;
+	@DEF_CU_MALLOC(`count_d´, `unsigned int´, 1)
+	@DEF_CU_MALLOC(`x_p_X_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°))
+	@DEF_CU_MALLOC(`f_n_part_sums_d´, `float´, `@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´)´)
+	@DEF_CU_MALLOC(`tri_part_sums´, `float3´, `@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´)´)
+	@DEF_CU_MALLOC(`v_tmp_cmplx_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°))
+	@DEF_CU_MALLOC(`f_p_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°))
+	@DEF_CU_MALLOC(`f_t_p_d´, `@DEF_FFT_PRECISION(`C´)´, @eval(@DEF_FFT_SIZE° * (@DEF_FFT_SIZE° / 2 + 1) * @DEF_NUM_PATCHES°))
+	@DEF_CU_MALLOC(`nabla_tilde_f´, `float´, `@DEF_SIZE_Y°´)
+	@DEF_CU_MALLOC(`v_4_d´, `float´, `@DEF_SIZE_Y°´)
+	@DEF_CU_MALLOC(`v_3_d´, `float´, `@DEF_SIZE_Y°´)
 
-			// f_t_p_k{_i,j} := conj(2Dfft(zuSchnipselGröße(f_k{_i,j})))
-			// => F^T_{k,i,j}
-//			load_f_X_1_F() -> store_f_T_p_conj_fft_X() [stream k] @dnl° DONE see: plan_f_p_X_T[k]
+	@DEF_CUFFT_HANDLE(`f_p_X´, `R´, `stream´, (,), ())
+	@DEF_CUFFT_HANDLE(`f_p_X_T´, `R´, `stream´, (`f_X_1_l_F´,), (`f_T_p_conj_fft_X´,))
+	@DEF_CUFFT_HANDLE(`x_p_X´, `R´, `stream´, (,), ())
+	@DEF_CUFFT_HANDLE(`F_k´, `C´, `stream´, (`F_X_m_F_X´, `x_p_X´), (`y_plus_y_X´,))
+	@DEF_CUFFT_HANDLE(`v_3_X_T_F´, `R´, `stream´, (,), ())
+	@DEF_CUFFT_HANDLE(`F_T_k´, `C´, `stream´, (`F_X_m_F_X´, `v_tmp_cmplx_d´), (`x_plus_x_weights_X´,))
 
-			cudaEventRecord(events[k], streams[k]);
-		}
-	}
-	for (int k = 0; k < num_images; k++)
-		cudaStreamWaitEvent(streams[0], events[k], 0);
-
-	while(true){ @dnl° fix this. Could result in an infinite loop if machine precision limits are reached in a bad enough way.
+	while(!(*finished)){ @dnl° fix this. Could result in an infinite loop if machine precision limits are reached in a bad enough way.
 		for (int b = 0; b < @DEF_m°; b++) {
-			// v_4 = 0
-			// X''{_i,j} = 2Dfft(X{_i,j})
-//			load_x_p_X() -> NULL [stream 0] @dnl° DONE see: plan_x_p_X
 
-			cudaEventRecord(helperEvents[0], streams[0]);
-			for (int k = 0; k < num_images; k++) { @dnl° TODO: use streams and/or pthreads for using the parallelism avaiable here.
+			setFloatDeviceZero(v_4_d, @DEF_SIZE_Y°, 128, stream);
 
-				cudaStreamWaitEvent(streams[k], helperEvents[0], 0);
-
-				// y_k{i,j} = y_k{_i,j} + 2Difft(X''{_i,j} * F_k{_i,j})
-				// => F_k
-//				load_F_X_m_F_X() -> store_y_plus_y_X() [stream k] @dnl° DONE see: plan_F_k
-
-				// v_3 = clip^X_y(y_k) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement.
-				// v_3 = v_3 - y'_k
-//				kernel_v_3_gets_y_min...() @dnl° TODO: make sure this gets a new f_n{_i} and count{_i} for each input image
-				// v_4{_i,j} = v_4{_i,j} + .5 * gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
-				// => F^T_k
-//				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() [stream k] @dnl° *= .5; see: nabla_f_to_nabla_tilde_f_kernel_X @dnl° DONE: see plan_v_3_X_T_F @dnl° DONE see: plan_F_T_k
-
-				cudaEventRecord(events[k], streams[k]);
-			}
-
-			for (int k = 0; k < num_images; k++)
-				cudaStreamWaitEvent(streams[0], events[k], 0);
-
-			// nabla_f = v_4
-
-			// nabla_tilde_f = nabla_F * { nabla_F > 0 && x == 0}
-			// => active set classification
-
-			// v_4 = 0
-
-			// nabla_tilde_f'{_i,j} = 2Dfft(nabla_tilde_f{_i,j})
-
-/*			{ @dnl° TODO: this will be a single kernel. see: nabla_f_to_nabla_tilde_f_kernle_X
-				v_4 *= .5; @dnl° grabbed this to not do it in store_y_plus_y_X()
-				x_o = X;
-				nabla_tilde_f = v_4 > 0 && 0 == X ? 0 : v_4;
-				VX = x_o - \beta * \alpha * nabla_tilde_f;
-				scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc = scalar_prod(nabla_f_o, (x_o - X));
-				nabla_f_o = nabla_tilde_f;
-			} [stream 0]
-*/
-			cudaEventRecord(helperEvents[0], streams[0]);
-
-			cudaStreamWaitEvent(streams[1], helperEvents[0], 0);
-//			v_4 = 0; [stream 1]
-			cudaEventRecord(helperEvents[1], streams[1]);
-
-//			nabla_tilde_f' = fft(nabla_tilde_f); [stream 0] @dnl° DONE see: plan_nabla_tilde_f_p
-			cudaEventRecord(helperEvents[0], streams[0]);
+			cufftExecR2C(plan_x_p_X, x_d, x_p_X_d);
 
 			for (int k = 0; k < num_images; k++) {
+				cufftExecR2C(plan_f_p_X, f_h[k], f_p_d);
+				cufftExecR2C(plan_f_p_X_T, f_h[k], f_t_p_d);
 
-				cudaStreamWaitEvent(streams[k], helperEvents[0], 0);
-				// v_3{_i,j} = v_3{_i,j} + 2Difft(nabla_tilde_f'{_i,j} * f_p{_i,j})
-				// => F_k
-//				load_F_X_m_F_X() -> store_y_plus_y_X() @dnl° DONE see: plan_F_k
+				setFloatDeviceZero(v_3_d, @DEF_SIZE_Y°, 128, stream);
 
-				// v_3 = clip^X_y(v_3) @dnl° Already done via the restriction to `X´, `Y´ in  the last statement. @dnl° TODO: check this out. Create an Issue for it.
+				cufftExecC2R(plan_F_k, f_p_d, v_3_d);
 
-				cudaStreamWaitEvent(streams[k], helperEvents[1], 0);
-				// v_4{_i,j} = v_4{_i,j} + gewichtung(2Difft(2Dfft(v_3{_i,j}) * f_t_p_k{_i,j}))
-				// => F^T_k
-//				load_v_3_X_T_F() -> NULL; load_F_X_m_F_X() -> store_x_plus_x_weights_X() @dnl° DONE see: plan_v_3_X_T_F @dnl° DONE see: plan_F_T_k
-
-				cudaEventRecord(events[k], streams[k]);
-
+				kernel_v_3_gets_y_min_y_k_and_f_n_gets_abs_bracketo_y_min_y_i_bracketc_sqr<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(v_3_d, v_3_d, y_k_h[k], f_n_part_sums_d, &f_n_d[k], count_d);
+				cufftExecR2C(plan_v_3_X_T_F, v_3_d, v_tmp_cmplx_d);
+				cufftExecC2R(plan_F_T_k, f_t_p_d, v_4_d);
 			}
-			// delta_f_tilde{_i,j} = v_4
 
-			// X = X - \beta * \alpha * nalba_f_tilde @dnl° DONE
-			// => Update
+			kernel_nabla_f_to_nabla_tilde_f_X<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(v_4_d, x_d, nabla_tilde_f, alpha_beta, scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, count, f_n_part_sums_d);
+			cufftExecR2C(plan_x_p_X, nabla_tilde_f, x_p_X_d);
 
-			for (int k = 0; k < num_images; k++)
-				cudaStreamWaitEvent(streams[0], events[k], 0);
+			setFloatDeviceZero(v_4_d, @DEF_SIZE_Y°, 128, stream);
 
-/*			{ @dnl° TODO: incorporate everything from here on into the new kernel "delta_nabla_f_tilde", so we can make use of the reduction for {scalar_prod(nabla_tilde_f, delta_tilde_f); Sum[f_n{_i}, {i, 0, num_images-1}], |nabla_tilde_f|^2, |delta_tilde_f|^2} and instantly use the result. In case of n_a <= n_s set a pointer (in mapped host memory?) and later use that to decide wether to continue optimizeing or not.
-				// delta_nabla_f_tilde = scalar_prod(nabla_f_tilde, delta_f_tilde)
-				delta_nabla_f_tilde = scalar_prod(nabla_tilde_f, delta_tilde_f);
+			for (int k = 0; k < num_images; k++) {
+				cufftExecR2C(plan_f_p_X, f_h[k], f_p_d);
+				cufftExecR2C(plan_f_p_X_T, f_h[k], f_t_p_d);
 
-				if (b % 2 == 0) {
-					// n_a = |nabla_f_tilde|^2
-					if (n_a <= n_s)
-						// return X;
-					else
-						// a = n_a / delta_nabla_f_tilde
-				} else
-					// a = delta_nabla_f_tilde / |delta_f_tilde|^2
+				setFloatDeviceZero(v_3_d, @DEF_SIZE_Y°, 128, stream);
 
-				// f_n = sum^{num_images}_{k=0}(|y_k - y_k'|^2)
-				if (f_o - f_n <= \sigma * scalar_prod(nabla_f_o, (x_o -X)) ) { @dnl° scalar_prod(nabla_f_o, (x_o -X)) see: nabla_f_to_nabla_tilde_f_kernel_X
-					// \beta = \eta * \beta
-				}
+				cufftExecC2R(plan_F_k, f_p_d, v_3_d);@dnl° TODO: check this out. Create an Issue for it.
 
-				// f_o = f_n @dnl° see: delta_nabla_f_tilde_kernel_X
-				// nabla_f_o = nabla_tilde_f @dnl° see: delta_nabla_f_tilde_kernel_X
-			} [stream 0]*/
-			// x_o = X
-			@dnl° see: nabla_f_to_nabla_tilde_f_kernel_X
+				cufftExecR2C(plan_v_3_X_T_F, v_3_d, v_tmp_cmplx_d);
+				cufftExecC2R(plan_F_T_k, f_t_p_d, v_4_d);
+			}
+
+			kernel_delta_nabla_tilde_f_X<<<@CALL_ROUND_BLOCK_SIZE_UP(`@DEF_SIZE_Y°´, `1024´), 1024, 0, stream>>>(tri_part_sums, nabla_tilde_f, delta_tilde_f, f_n, beta, b, count, scalar_prod__bo_nabla_f__bo_x_o_min_X__bc__bc, f_o, a, alpha_beta, num_images, finished);
 		}
 	}
-	cudaEventDestroy(helperEvents[0]);
-	cudaEventDestroy(helperEvents[1]);
-	for (int k = 0; k < num_images; k++) { @dnl° Create some events and streams, so we can better parallize the images where applicable.
-		cudaEventDestroy(events[k]);
-		cudaStreamDestroy(streams[k]); @dnl° TODO: change this to the correct "get rid of this stream" thing.
-	}
+	while(cudaErrorNotReady == cudaStreamQuery(stream)) sched_yield();
+	cudaStreamDestroy(stream);
 }
 typedef struct optimizeF_helper_struct {
 	float* f_h;
@@ -722,32 +642,25 @@ void optimizeF_helper(void* datav) {
 	return;
 }
 void computeRecursive(float** f_h, float** y_k_h, float* x, int num_images){
-		pthread_t* threads;
-		threads = (pthread_t*) malloc(sizeof(pthread_t) * num_images);
 		if (num_images > 2) {
 			@DEF_CU_MALLOC(`x_h_1´, `float´, `@DEF_SIZE_Y°´, `h´)
 			@DEF_CU_MALLOC(`x_h_2´, `float´, `@DEF_SIZE_Y°´, `h´)
 			computeRecursive(&f_h[0], &y_k_h[0], x_h_1, num_images/2);
 			computeRecursive(&f_h[num_images/2], &y_k_h[num_images/2], x_h_2, num_images/2);
 			for(int i=0; i < num_images / 2;i++)
-				pthread_create(&(threads[i]), NULL, (void* (*)(void *)) &optimizeF_helper, (void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2}));
+				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2}));
 			for(int i=num_images/2; i < num_images; i++)
-				pthread_create(&(threads[i]), NULL, (void* (*)(void *)) &optimizeF_helper, (void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1}));
-			for(int i=0; i < num_images; i++)
-				pthread_join(threads[i], NULL);
+				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1}));
 			@_free_stack°
 		} else {
 			float* x_h_1 = y_k_h[1];
 			float* x_h_2 = y_k_h[0];
 			for(int i=0; i < num_images / 2;i++)
-				pthread_create(&(threads[i]), NULL, (void* (*)(void *)) &optimizeF_helper, (void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2}));
+				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_2}));
 			for(int i=num_images/2; i < num_images; i++)
-				pthread_create(&(threads[i]), NULL, (void* (*)(void *)) &optimizeF_helper, (void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1}));
-			for(int i=0; i < num_images; i++)
-				pthread_join(threads[i], NULL);
+				optimizeF_helper((void*) &((optimizeF_helper_struct_t) {.f_h = f_h[i], .y_k_h = y_k_h[i], .x_h = x_h_1}));
 		}
 		optimizeX(f_h, x, y_k_h, num_images);
-		free(threads);
 	}
 int main(void) {
 	/*float* f_h[@DEF_NUM_IMGS°];
