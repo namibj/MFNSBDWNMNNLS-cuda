@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <sched.h>
 #include <pthread.h>
+#include <opencv/cv.h>
+#include <opencv2/highgui/highgui_c.h>
 include(`m4_redefines.m4')dnl
 define(`stop', defn(`dnl'))dnl
 changequote(`[', `]') stop ´´)
@@ -673,7 +675,8 @@ void computeRecursive(float** f_h, float** y_k_h, float* x, int num_images){
 		}
 		optimizeX(f_h, x, y_k_h, num_images);
 	}
-int main(void) {
+int main(int argc, char** argv) {
+	IplImage* input_image = cvLoadImage(argv[1], 0); //CV_LOAD_IMAGE = 0, according to opencv2/highgui/highgui_c.h
 	/*float* f_h[@DEF_NUM_IMGS°];
 	float* y_k_h[@DEF_NUM_IMGS°];
 	float* x;

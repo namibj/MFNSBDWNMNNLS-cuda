@@ -1,2 +1,4 @@
 /Debug/
 *.swp
+/src/processor
+/src/main.cu

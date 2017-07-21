@@ -17,7 +17,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="" id="com.nvidia.cuda.ide.on_path.configuration.debug.1038588870" name="Debug" parent="com.nvidia.cuda.ide.on_path.configuration.debug">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="rm -rf" description="" id="com.nvidia.cuda.ide.on_path.configuration.debug.1038588870" name="Debug" parent="com.nvidia.cuda.ide.on_path.configuration.debug">
 					<folderInfo id="com.nvidia.cuda.ide.on_path.configuration.debug.1038588870." name="/" resourcePath="">
 						<toolChain id="com.nvidia.cuda.tools.toolchain.on_path.exe.debug.2015490008" name="CUDA Toolkit on the path" superClass="com.nvidia.cuda.tools.toolchain.on_path.exe.debug">
 							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.1871711089" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
@@ -29,6 +29,9 @@
 								<option id="nvcc.compiler.pic.1072137237" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
 								<option id="nvcc.compiler.verbose.1507412274" name="Verbose (-v)" superClass="nvcc.compiler.verbose" value="false" valueType="boolean"/>
 								<option id="nvcc.compiler.keep.42576829" name="Keep intermidiate files (-keep)" superClass="nvcc.compiler.keep" value="false" valueType="boolean"/>
+								<option id="nvcc.compiler.include.paths.2128728638" name="Include paths (-I)" superClass="nvcc.compiler.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/lib/opencv-3.2.0/include}&quot;"/>
+								</option>
 								<inputType id="nvcc.compiler.input.cu.874540931" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.545073176" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.981183368" superClass="nvcc.compiler.input.c"/>
@@ -55,8 +58,8 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.nvidia.cuda.ide.on_path.configuration.debug.1038588870.1986512284" name="main.m4" rcbsApplicability="disable" resourcePath="src/main.m4" toolsToInvoke="">
-						<tool command="m4 -I $(&lt;D) $&lt; &gt; $@" customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.645704607" name="Resource Custom Build Step">
+					<fileInfo id="com.nvidia.cuda.ide.on_path.configuration.debug.1038588870.1986512284" name="main.m4" rcbsApplicability="override" resourcePath="src/main.m4" toolsToInvoke="org.eclipse.cdt.managedbuilder.ui.rcbs.645704607">
+						<tool announcement="Invoking: Resource Custom Build Step" command="m4 -I $(&lt;D) $&lt; &gt; $@" customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.645704607" name="Resource Custom Build Step">
 							<inputType id="org.eclipse.cdt.managedbuilder.ui.rcbs.inputtype.774213493" name="Resource Custom Build Step Input Type">
 								<additionalInput kind="additionalinputdependency" paths="src/m4_redefines.m4"/>
 							</inputType>
@@ -64,7 +67,7 @@
 						</tool>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="src/MFNSBDWNMNNLS.cu" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="src/main.m4|src/MFNSBDWNMNNLS.cu" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -93,7 +96,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="" id="com.nvidia.cuda.ide.on_path.configuration.release.838523431" name="Release" parent="com.nvidia.cuda.ide.on_path.configuration.release">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release" cleanCommand="rm -rf" description="" id="com.nvidia.cuda.ide.on_path.configuration.release.838523431" name="Release" parent="com.nvidia.cuda.ide.on_path.configuration.release">
 					<folderInfo id="com.nvidia.cuda.ide.on_path.configuration.release.838523431." name="/" resourcePath="">
 						<toolChain id="com.nvidia.cuda.ide.toolchain.on_path.exe.release.2056363661" name="CUDA Toolkit on the path" superClass="com.nvidia.cuda.ide.toolchain.on_path.exe.release">
 							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.1572226803" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
@@ -150,12 +153,13 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
-		<configuration configurationName="Release">
+		<configuration configurationName="Debug">
 			<resource resourceType="PROJECT" workspacePath="/MFNSBDWNMNNLS"/>
 		</configuration>
-		<configuration configurationName="Debug">
+		<configuration configurationName="Release">
 			<resource resourceType="PROJECT" workspacePath="/MFNSBDWNMNNLS"/>
 		</configuration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
